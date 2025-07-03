@@ -1,0 +1,7 @@
+aiogram==3.*
+asyncpg
+pandas
+plotly
+openpyxl
+pydantic
+sqlalchemy[asyncio] 
