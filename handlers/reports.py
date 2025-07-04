@@ -121,5 +121,6 @@ async def send_summary(msg: Message):
     m_act = [m for m in machines if m.status == "active"]
     text = (f"Всего кофемашин в аренде: {len(m_act)}\nПросрочено платежей: {len(overdue)}"
             f"\nСумма денег в депозитах: {sum(m.deposit for m in m_act if m.deposit)}"
-            f"\nПланируемая прибыль за месяц: {one_month_sum}")
+            f"\nПланируемая прибыль за месяц: {one_month_sum}"
+            f"\nКоличество сделок, которых нет в 1С: {sum(1 for m in m_act if not m.in_1C)}")
     await msg.answer(text) 

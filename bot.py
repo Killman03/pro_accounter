@@ -34,13 +34,13 @@ async def main():
     @dp.message(Command("start"))
     async def start_cmd(msg: Message):
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Добавить кофемашину", callback_data="/add_machine")],
+            [InlineKeyboardButton(text="☕️ Добавить сделку", callback_data="/add_machine")],
             [InlineKeyboardButton(text="💳 Платежи", callback_data="/payments")],
-            [InlineKeyboardButton(text="Модели кофемашин", callback_data="/models")],
-            [InlineKeyboardButton(text="Мои арендаторы", callback_data="/clients")],
-            [InlineKeyboardButton(text="Отчет (Excel)", callback_data="/report")],
-            [InlineKeyboardButton(text="Графики", callback_data="/plot")],
-            [InlineKeyboardButton(text="Выжимка", callback_data="/summary")],
+            [InlineKeyboardButton(text="💎 Модели кофемашин", callback_data="/models")],
+            [InlineKeyboardButton(text="👨‍🦰 Мои арендаторы", callback_data="/clients")],
+            [InlineKeyboardButton(text="📑 Отчет (Excel)", callback_data="/report")],
+            [InlineKeyboardButton(text="📈 Графики", callback_data="/plot")],
+            [InlineKeyboardButton(text="🌡 Выжимка", callback_data="/summary")],
         ])
         await msg.answer("Добро пожаловать! Выберите действие:", reply_markup=kb)
 

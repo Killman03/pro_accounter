@@ -63,7 +63,7 @@ async def select_machine_for_payment(callback: CallbackQuery, state: FSMContext)
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💰 Арендная плата", callback_data="type_rent")],
-        [InlineKeyboardButton(text="💳 Депозит", callback_data="type_deposit")],
+        [InlineKeyboardButton(text="💳 Платеж", callback_data="type_deposit")],
         [InlineKeyboardButton(text="🛒 Выкуп", callback_data="type_buyout")],
     ])
     await callback.message.answer("Выберите тип платежа:", reply_markup=kb)
@@ -85,7 +85,7 @@ async def select_payment_type(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(f"Введите сумму арендной платы (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
     elif payment_type == "deposit":
         default_amount = machine.deposit
-        await callback.message.answer(f"Введите сумму депозита (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
+        await callback.message.answer(f"Введите сумму платежа (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
     else:  # buyout
         await callback.message.answer("Введите сумму выкупа:")
     
