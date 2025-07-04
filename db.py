@@ -5,6 +5,8 @@ from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 from models import Base, CoffeeMachineORM, PaymentORM, MachineModelORM
 from datetime import date
 from typing import Optional
+from sqlalchemy.orm import selectinload
+
 
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
@@ -45,7 +47,9 @@ async def add_coffee_machine(machine_data: dict):
 
 async def get_all_machines():
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(CoffeeMachineORM))
+        result = await session.execute(
+            select(CoffeeMachineORM).options(selectinload(CoffeeMachineORM.payments_rel))
+        )
         return result.scalars().all()
 
 async def add_payment(payment_data: dict):
@@ -81,4 +85,11 @@ async def update_machine_status(machine_id: int, status: str, buyout: bool = Fal
             .where(CoffeeMachineORM.id == machine_id)
             .values(**values)
         )
-        await session.commit() 
+        await session.commit()
+
+async def get_machine_model_by_name(model_name: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MachineModelORM).where(MachineModelORM.name == model_name)
+        )
+        return result.scalar_one_or_none()

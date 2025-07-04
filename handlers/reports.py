@@ -116,5 +116,10 @@ async def send_summary(msg: Message):
     machines = await get_all_machines()
     from datetime import date
     overdue = [m for m in machines if m.payment_date < date.today()]
-    text = f"Всего кофемашин: {len(machines)}\nПросрочено платежей: {len(overdue)}"
+    one_month_sum = sum(m.rent_price for m in machines if m.payment_date.month == date.today().month and m.payment_date.year == date.today().year)
+
+    m_act = [m for m in machines if m.status == "active"]
+    text = (f"Всего кофемашин в аренде: {len(m_act)}\nПросрочено платежей: {len(overdue)}"
+            f"\nСумма денег в депозитах: {sum(m.deposit for m in m_act if m.deposit)}"
+            f"\nПланируемая прибыль за месяц: {one_month_sum}")
     await msg.answer(text) 

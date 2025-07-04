@@ -91,7 +91,7 @@ async def input_deposit(msg: Message, state: FSMContext):
     except ValueError:
         await msg.answer("Введите число", reply_markup=main_menu_kb)
         return
-    next_month = (date.today() + timedelta(days=30)).strftime('%Y-%m-%d')
+    next_month = (date.today() + timedelta(days=32)).strftime('%Y-%m-%d')
     await msg.answer(f"Введите дату следующего платежа (YYYY-MM-DD), если хотите по умолчанию {next_month}, введите '.':", reply_markup=main_menu_kb)
     await state.set_state(AddMachine.payment_date)
 
@@ -99,7 +99,7 @@ async def input_deposit(msg: Message, state: FSMContext):
 async def input_payment_date(msg: Message, state: FSMContext):
     try:
         if msg.text == '.':
-            d = date.today() + timedelta(days=30)
+            d = date.today() + timedelta(days=32)
         else:
             d = date.fromisoformat(msg.text)
     except Exception:

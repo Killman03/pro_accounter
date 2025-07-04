@@ -9,6 +9,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import AsyncSessionLocal
 from models import CoffeeMachineORM
+from db import get_machine_model_by_name
+
 
 router = Router()
 
@@ -18,19 +20,39 @@ class AddPayment(StatesGroup):
     amount = State()
     payment_date = State()
 
+
 @router.message(Command("payments"))
 async def start_payments(msg: Message, state: FSMContext):
     machines = await get_all_machines()
     active_machines = [m for m in machines if m.status == "active"]
-    
+
     if not active_machines:
         await msg.answer("Нет активных кофемашин для внесения платежей.")
         return
-    
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"{m.tenant} - {m.model}", callback_data=f"machine_{m.id}")]
-        for m in active_machines
-    ])
+
+    kb_buttons = []
+    for m in active_machines:
+        # Получаем модель машины для получения полной цены
+        machine_model = await get_machine_model_by_name(m.model)
+        full_price = machine_model.full_price if machine_model else 0
+
+        # Сумма всех платежей (исключая депозит и выкуп)
+        payments_sum = sum(
+            p.amount for p in m.payments_rel
+            if not p.is_deposit and not p.is_buyout
+        )
+
+        # Расчет: цена - депозит - выплаты
+        remaining = full_price - m.deposit - payments_sum
+
+        kb_buttons.append(
+            [InlineKeyboardButton(
+                text=f"{m.tenant} - {m.model} - Остаток: {remaining:.2f}",
+                callback_data=f"machine_{m.id}"
+            )]
+        )
+
+    kb = InlineKeyboardMarkup(inline_keyboard=kb_buttons)
     await msg.answer("Выберите кофемашину для внесения платежа:", reply_markup=kb)
     await state.set_state(AddPayment.select_machine)
 
@@ -95,18 +117,18 @@ async def input_payment_amount(msg: Message, state: FSMContext):
             await msg.answer("Введите корректную сумму (число) или '.' для значения по умолчанию")
             return
     
-    await msg.answer("Введите дату платежа (YYYY-MM-DD) или 'сегодня':")
+    await msg.answer("Введите дату платежа (YYYY-MM-DD) или '.' (точку):")
     await state.set_state(AddPayment.payment_date)
 
 @router.message(AddPayment.payment_date)
 async def input_payment_date(msg: Message, state: FSMContext):
     try:
-        if msg.text.lower() == "сегодня":
-            payment_date = date.today()
+        if msg.text.lower() == ".":
+            payment_date = date.today() + timedelta(days=0)  # Сегодняшняя дата
         else:
             payment_date = date.fromisoformat(msg.text)
     except ValueError:
-        await msg.answer("Введите дату в формате YYYY-MM-DD или 'сегодня'")
+        await msg.answer("Введите дату в формате YYYY-MM-DD или '.' (точку) для сегодняшней даты")
         return
     
     data = await state.get_data()
