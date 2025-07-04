@@ -7,6 +7,7 @@ from handlers.reports import router as reports_router, send_excel_report, choose
 from handlers.reminders import router as reminders_router, reminders_task
 from handlers.payments import router as payments_router, start_payments
 from handlers.models import router as models_router, show_models
+from handlers.clients import router as clients_router, show_clients
 
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
@@ -22,6 +23,7 @@ def setup_routers(dp: Dispatcher):
     dp.include_router(reminders_router)
     dp.include_router(payments_router)
     dp.include_router(models_router)
+    dp.include_router(clients_router)
 
 async def main():
     await init_db()
@@ -35,6 +37,7 @@ async def main():
             [InlineKeyboardButton(text="Добавить кофемашину", callback_data="/add_machine")],
             [InlineKeyboardButton(text="💳 Платежи", callback_data="/payments")],
             [InlineKeyboardButton(text="Модели кофемашин", callback_data="/models")],
+            [InlineKeyboardButton(text="Мои арендаторы", callback_data="/clients")],
             [InlineKeyboardButton(text="Отчет (Excel)", callback_data="/report")],
             [InlineKeyboardButton(text="Графики", callback_data="/plot")],
             [InlineKeyboardButton(text="Выжимка", callback_data="/summary")],
@@ -69,6 +72,11 @@ async def main():
     @dp.callback_query(F.data == "/summary")
     async def cb_summary(callback: CallbackQuery):
         await send_summary(callback.message)
+        await callback.answer()
+
+    @dp.callback_query(F.data == "/clients")
+    async def cb_clients(callback: CallbackQuery, state: FSMContext):
+        await show_clients(callback.message, state)
         await callback.answer()
 
     # Запуск автонапоминаний в фоне

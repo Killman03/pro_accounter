@@ -93,3 +93,31 @@ async def get_machine_model_by_name(model_name: str):
             select(MachineModelORM).where(MachineModelORM.name == model_name)
         )
         return result.scalar_one_or_none()
+
+async def update_machine_full_price(machine_id: int, new_price: float):
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id).values(full_price=new_price)
+        )
+        await session.commit()
+
+async def update_machine_deal_type(machine_id: int, new_type: str):
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id).values(deal_type=new_type)
+        )
+        await session.commit()
+
+async def update_machine_1c(machine_id: int, new_1c: bool):
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id).values(in_1C=new_1c)
+        )
+        await session.commit()
+
+async def update_machine_rent_price(machine_id: int, new_rent: float):
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id).values(rent_price=new_rent)
+        )
+        await session.commit()

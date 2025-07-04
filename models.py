@@ -24,6 +24,7 @@ class CoffeeMachineORM(Base):
     payments = Column(ARRAY(Date), default=[])
     deal_type = Column(String(20), default='Аренда')  # Аренда или Рассрочка
     comment = Column(Text, nullable=True)
+    full_price = Column(Float, nullable=True)  # Индивидуальная стоимость
     payments_rel = relationship('PaymentORM', back_populates='machine')
 
 class PaymentORM(Base):
@@ -54,6 +55,7 @@ class CoffeeMachine(BaseModel):
     payments: List[date] = Field(default_factory=list)
     deal_type: str = "Аренда"
     comment: Optional[str] = None
+    full_price: Optional[float] = None
 
 class Payment(BaseModel):
     id: Optional[int] = None
