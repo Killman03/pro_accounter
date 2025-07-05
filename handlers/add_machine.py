@@ -18,7 +18,6 @@ class AddMachine(StatesGroup):
     tenant = State()
     phone = State()
     deposit = State()
-    payment_date = State()
     in_1C = State()
     deal_type = State()
     comment = State()
@@ -91,26 +90,13 @@ async def input_deposit(msg: Message, state: FSMContext):
     except ValueError:
         await msg.answer("Введите число", reply_markup=main_menu_kb)
         return
-    next_month = (date.today() + timedelta(days=32)).strftime('%Y-%m-%d')
-    await msg.answer(f"Введите дату следующего платежа (YYYY-MM-DD), если хотите по умолчанию {next_month}, введите '.':", reply_markup=main_menu_kb)
-    await state.set_state(AddMachine.payment_date)
-
-@router.message(AddMachine.payment_date)
-async def input_payment_date(msg: Message, state: FSMContext):
-    try:
-        if msg.text == '.':
-            d = date.today() + timedelta(days=32)
-        else:
-            d = date.fromisoformat(msg.text)
-    except Exception:
-        await msg.answer("Введите дату в формате YYYY-MM-DD или '.' для значения по умолчанию", reply_markup=main_menu_kb)
-        return
-    await state.update_data(payment_date=d)
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="В 1С", callback_data="in1c_true"), InlineKeyboardButton(text="Без 1С", callback_data="in1c_false")]
     ])
     await msg.answer("Добавить отметку о 1С?", reply_markup=kb)
     await state.set_state(AddMachine.in_1C)
+
+
 
 @router.callback_query(AddMachine.in_1C)
 async def input_in1c(callback: CallbackQuery, state: FSMContext):
@@ -143,7 +129,6 @@ async def input_comment(msg: Message, state: FSMContext):
         "tenant": data["tenant"],
         "phone": data["phone"],
         "deposit": data["deposit"],
-        "payment_date": data["payment_date"],
         "start_date": date.today(),
         "in_1C": data["in_1C"],
         "status": "active",

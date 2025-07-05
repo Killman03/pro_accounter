@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from db import get_all_machines, get_payments_by_machine, get_all_machine_models
 from utils.excel import generate_excel_report
 from utils.plots import plot_top_models
+from datetime import date, timedelta
 import asyncio
 
 router = Router()
@@ -131,7 +132,26 @@ async def choose_plot(msg: Message):
 @router.message(Command("summary"))
 async def send_summary(msg: Message):
     machines = await get_all_machines()
-    from datetime import date
-    overdue = [m for m in machines if m.payment_date < date.today()]
-    text = f"Всего кофемашин: {len(machines)}\nПросрочено платежей: {len(overdue)}"
+    # Теперь просроченные платежи рассчитываются динамически от последнего платежа
+    overdue = []
+    for m in machines:
+        if m.status != "active":
+            continue
+        # Получаем дату последнего платежа
+        from db import get_last_payment_date
+        last_payment_date = await get_last_payment_date(m.id)
+        if last_payment_date is None:
+            last_payment_date = m.start_date
+        
+        # Рассчитываем дату следующего платежа
+        next_payment_date = last_payment_date + timedelta(days=30)
+        if next_payment_date < date.today():
+            overdue.append(m)
+    # Рассчитываем планируемую прибыль за месяц от активных сделок
+    one_month_sum = sum(m.rent_price for m in machines if m.status == "active")
+    m_act = [m for m in machines if m.status == "active"]
+    text = (f"Всего кофемашин в аренде: {len(m_act)}\nПросрочено платежей: {len(overdue)}"
+            f"\nСумма денег в депозитах: {sum(m.deposit for m in m_act if m.deposit)}"
+            f"\nПланируемая прибыль за месяц: {one_month_sum}"
+            f"\nКоличество сделок, которых нет в 1С: {sum(1 for m in m_act if not m.in_1C)}")
     await msg.answer(text) 

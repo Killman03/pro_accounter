@@ -65,14 +65,7 @@ async def get_payments_by_machine(machine_id: int):
         result = await session.execute(select(PaymentORM).where(PaymentORM.machine_id == machine_id))
         return result.scalars().all()
 
-async def update_machine_payment_date(machine_id: int, new_payment_date: date):
-    async with AsyncSessionLocal() as session:
-        await session.execute(
-            update(CoffeeMachineORM)
-            .where(CoffeeMachineORM.id == machine_id)
-            .values(payment_date=new_payment_date)
-        )
-        await session.commit()
+
 
 async def update_machine_status(machine_id: int, status: str, buyout: bool = False, buyout_date: Optional[date] = None):
     async with AsyncSessionLocal() as session:
@@ -121,3 +114,15 @@ async def update_machine_rent_price(machine_id: int, new_rent: float):
             update(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id).values(rent_price=new_rent)
         )
         await session.commit()
+
+async def get_last_payment_date(machine_id: int) -> Optional[date]:
+    """Получить дату последнего платежа для машины"""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(PaymentORM.payment_date)
+            .where(PaymentORM.machine_id == machine_id)
+            .order_by(PaymentORM.payment_date.desc())
+            .limit(1)
+        )
+        last_payment = result.scalar_one_or_none()
+        return last_payment

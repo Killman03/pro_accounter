@@ -121,7 +121,7 @@ async def input_payment_amount(msg: Message, state: FSMContext):
             await msg.answer("Введите корректную сумму (число) или '.' для значения по умолчанию")
             return
     
-    await msg.answer("Введите дату платежа (YYYY-MM-DD) или '.' (точку):")
+    await msg.answer("Введите дату платежа (YYYY-MM-DD) или '.' (точку) чтобы указать сегодняшнее число:")
     await state.set_state(AddPayment.payment_date)
 
 @router.message(AddPayment.payment_date)
@@ -166,14 +166,7 @@ async def input_payment_date(msg: Message, state: FSMContext):
                         buyout_date=payment_date
                     )
                 )
-            elif data["payment_type"] == "rent":
-                # Аренда - обновляем дату следующего платежа
-                next_payment = payment_date + timedelta(days=30)
-                await session.execute(
-                    update(CoffeeMachineORM)
-                    .where(CoffeeMachineORM.id == data["machine_id"])
-                    .values(payment_date=next_payment)
-                )
+
             
             await session.commit()
     
