@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import AsyncSessionLocal
 from models import CoffeeMachineORM
 from db import get_machine_model_by_name
+from db import get_all_machine_models
+from db import get_payments_by_machine
 
 
 router = Router()
@@ -32,18 +34,14 @@ async def start_payments(msg: Message, state: FSMContext):
 
     kb_buttons = []
     for m in active_machines:
-        # Получаем модель машины для получения полной цены
-        machine_model = await get_machine_model_by_name(m.model)
-        full_price = machine_model.full_price if machine_model else 0
-
-        # Сумма всех платежей (исключая депозит и выкуп)
-        payments_sum = sum(
-            p.amount for p in m.payments_rel
-            if not p.is_deposit and not p.is_buyout
-        )
+        # Получаем модель машины для получения полной стоимости
+        models = {m.name: m for m in await get_all_machine_models()}
+        full_price = m.full_price if m.full_price else (models[m.model].full_price if m.model in models else 0)
+        all_payments = await get_payments_by_machine(m.id)
+        total_paid = sum(p.amount for p in all_payments) + (m.deposit if m.deposit else 0)
 
         # Расчет: цена - депозит - выплаты
-        remaining = full_price - m.deposit - payments_sum
+        remaining = full_price - total_paid
 
         kb_buttons.append(
             [InlineKeyboardButton(
@@ -85,9 +83,15 @@ async def select_payment_type(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(f"Введите сумму арендной платы (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
     elif payment_type == "deposit":
         default_amount = machine.deposit
-        await callback.message.answer(f"Введите сумму платежа (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
+        await callback.message.answer(f"Введите сумму депозита (по умолчанию {default_amount}) или '.' для значения по умолчанию:")
     else:  # buyout
-        await callback.message.answer("Введите сумму выкупа:")
+        # Рассчитываем остаток для выкупа
+        models = {m.name: m for m in await get_all_machine_models()}
+        full_price = machine.full_price if machine.full_price else (models[machine.model].full_price if machine.model in models else 0)
+        all_payments = await get_payments_by_machine(machine.id)
+        total_paid = sum(p.amount for p in all_payments)  # Учитываем все платежи включая депозиты
+        remaining = max(full_price - total_paid, 0)
+        await callback.message.answer(f"Полная стоимость: {full_price}\nУже оплачено: {total_paid}\nОстаток к доплате: {remaining}\nВведите сумму выкупа:")
     
     await state.set_state(AddPayment.amount)
     await callback.answer()

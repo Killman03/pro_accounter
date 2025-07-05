@@ -17,6 +17,7 @@ class CoffeeMachineORM(Base):
     phone = Column(String(20), nullable=False)
     deposit = Column(Float, nullable=False)
     payment_date = Column(Date, nullable=False)
+    start_date = Column(Date, nullable=False)  # Дата начала сделки
     in_1C = Column(Boolean, default=False)
     status = Column(String(20), default='active')
     buyout = Column(Boolean, default=False)
@@ -48,6 +49,7 @@ class CoffeeMachine(BaseModel):
     phone: str
     deposit: float
     payment_date: date
+    start_date: date
     in_1C: bool = False
     status: str = "active"  # active, buyout, returned, damaged, etc.
     buyout: bool = False

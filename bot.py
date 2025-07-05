@@ -15,7 +15,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards import main_menu_kb
 
 # Укажите свой chat_id для напоминаний
-ADMIN_CHAT_ID = 123456789  # Замените на свой Telegram ID
+ADMIN_CHAT_ID = 5717967396  # Замените на свой Telegram ID
 
 def setup_routers(dp: Dispatcher):
     dp.include_router(add_machine_router)

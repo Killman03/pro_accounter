@@ -144,6 +144,7 @@ async def input_comment(msg: Message, state: FSMContext):
         "phone": data["phone"],
         "deposit": data["deposit"],
         "payment_date": data["payment_date"],
+        "start_date": date.today(),
         "in_1C": data["in_1C"],
         "status": "active",
         "buyout": False,
