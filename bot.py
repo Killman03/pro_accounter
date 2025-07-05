@@ -1,6 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_ID
 from db import init_db
 from handlers.add_machine import router as add_machine_router, start_add_machine
 from handlers.reports import router as reports_router, send_excel_report, choose_plot, send_summary
@@ -15,7 +15,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards import main_menu_kb
 
 # Укажите свой chat_id для напоминаний
-ADMIN_CHAT_ID = 5717967396  # Замените на свой Telegram ID
+ADMIN_CHAT_ID = ADMIN_ID
 
 def setup_routers(dp: Dispatcher):
     dp.include_router(add_machine_router)
