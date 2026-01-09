@@ -194,6 +194,7 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+dumpp.sql
 # PyPI configuration file
 .pypirc
 
