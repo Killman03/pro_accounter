@@ -39,4 +39,4 @@ backups
 *.md
 !README.md
 
-dump.sql
+dumpp.sql
