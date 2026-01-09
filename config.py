@@ -3,7 +3,7 @@ import os
 
 load_dotenv()  # Загружает переменные из .env
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', '8487329217:AAE44Gx0yMtWSyeS-M2NYD4e1MyOOQD4sWQ')
+BOT_TOKEN = os.getenv('BOT_TOKEN', '')
 ADMIN_ID = int(os.getenv('ADMIN_ID', 5717967396))  # Замените на свой Telegram ID
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = int(os.getenv('DB_PORT', 5432))

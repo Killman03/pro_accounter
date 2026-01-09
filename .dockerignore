@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.eggs
+*.egg-info
+.venv
+venv
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+.pytest_cache
+htmlcov
+.coverage
+coverage.xml
+tests
+
+# Environment
+.env
+.env.local
+
+# Backups (монтируем отдельно)
+backups
+
+# Docs
+*.md
+!README.md
+
+dump.sql
