@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from db import add_coffee_machine, get_all_machine_models
 from utils.models_list import MODELS
-from utils.validators import validate_kg_phone
+from utils.validators import validate_kg_phone, normalize_kg_phone
 from datetime import date, timedelta
 from keyboards import main_menu_kb
 
@@ -75,10 +75,11 @@ async def input_tenant(msg: Message, state: FSMContext):
 
 @router.message(AddMachine.phone)
 async def input_phone(msg: Message, state: FSMContext):
-    if not validate_kg_phone(msg.text):
-        await msg.answer("Телефон должен быть в формате 996XXXXXXXXX", reply_markup=main_menu_kb)
+    normalized = normalize_kg_phone(msg.text)
+    if not normalized:
+        await msg.answer("Телефон должен быть в формате 996XXXXXXXXX (можно с пробелами или +)", reply_markup=main_menu_kb)
         return
-    await state.update_data(phone=msg.text)
+    await state.update_data(phone=normalized)
     await msg.answer("Введите сумму залога:", reply_markup=main_menu_kb)
     await state.set_state(AddMachine.deposit)
 

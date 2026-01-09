@@ -56,6 +56,7 @@ async def add_model_full_price(msg: Message, state: FSMContext):
         await msg.answer("Введите число")
         return
     data = await state.get_data()
+    await state.update_data(full_price=full_price)
     await add_machine_model(data["name"], data["default_rent"], full_price)
     await msg.answer(f"Модель {data['name']} добавлена!")
     await state.clear()

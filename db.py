@@ -36,6 +36,61 @@ async def delete_machine_model(model_id: int):
         await session.execute(delete(MachineModelORM).where(MachineModelORM.id == model_id))
         await session.commit()
 
+async def delete_coffee_machine(machine_id: int):
+    async with AsyncSessionLocal() as session:
+        # Удаляем связанные платежи
+        await session.execute(delete(PaymentORM).where(PaymentORM.machine_id == machine_id))
+        # Удаляем саму кофемашину
+        await session.execute(delete(CoffeeMachineORM).where(CoffeeMachineORM.id == machine_id))
+        await session.commit()
+
+async def delete_coffee_machine_by_tenant(tenant: str) -> int:
+    """
+    Удалить все сделки по ФИО арендатора (регистронезависимо, частичное совпадение).
+    Возвращает количество удалённых сделок.
+    """
+    tenant = tenant.strip()
+    if not tenant:
+        return 0
+    pattern = f"%{tenant}%"
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(CoffeeMachineORM.id).where(CoffeeMachineORM.tenant.ilike(pattern))
+        )
+        ids = [row[0] for row in result.all()]
+        if not ids:
+            return 0
+        await session.execute(delete(PaymentORM).where(PaymentORM.machine_id.in_(ids)))
+        await session.execute(delete(CoffeeMachineORM).where(CoffeeMachineORM.id.in_(ids)))
+        await session.commit()
+        return len(ids)
+
+# Удаление платежа
+async def delete_payment(payment_id: int):
+    async with AsyncSessionLocal() as session:
+        await session.execute(delete(PaymentORM).where(PaymentORM.id == payment_id))
+        await session.commit()
+
+async def delete_payment_by_tenant(tenant: str) -> int:
+    """
+    Удалить все платежи по ФИО арендатора (регистронезависимо, частичное совпадение).
+    Возвращает количество удалённых платежей.
+    """
+    tenant = tenant.strip()
+    if not tenant:
+        return 0
+    pattern = f"%{tenant}%"
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(PaymentORM.id).where(PaymentORM.tenant.ilike(pattern))
+        )
+        ids = [row[0] for row in result.all()]
+        if not ids:
+            return 0
+        await session.execute(delete(PaymentORM).where(PaymentORM.id.in_(ids)))
+        await session.commit()
+        return len(ids)
+
 # CRUD-функции
 async def add_coffee_machine(machine_data: dict):
     async with AsyncSessionLocal() as session:

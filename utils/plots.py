@@ -1,6 +1,29 @@
 import plotly.graph_objects as go
 from io import BytesIO
 
+# 5. Старт сделок по дням месяца
+async def plot_starts_per_day(data, month_label: str):
+    # data: [{'day': '01', 'count': 3}, ...]
+    days = [d['day'] for d in data]
+    counts = [d['count'] for d in data]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=days, y=counts, marker_color='teal'))
+    fig.update_layout(title=f'Старт сделок по дням ({month_label})', xaxis_title="День месяца", yaxis_title="Количество")
+    return await fig_to_bytesio(fig)
+
+async def plot_starts_per_week(data, month_label: str):
+    # data: [{'week': '2025-W39\n01.09-07.09', 'count': 4}, ...]
+    weeks = [d['week'] for d in data]
+    counts = [d['count'] for d in data]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=weeks, y=counts, marker_color='darkcyan'))
+    fig.update_layout(
+        title=f'Старт сделок по неделям ({month_label})',
+        xaxis_title="Неделя (даты)",
+        yaxis_title="Количество",
+    )
+    return await fig_to_bytesio(fig)
+
 # 1. Динамика платежей
 async def plot_payments_dynamic(data):
     fig = go.Figure()

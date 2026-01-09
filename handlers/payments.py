@@ -4,7 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from db import get_all_machines, add_payment
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import AsyncSessionLocal
@@ -121,7 +121,7 @@ async def input_payment_amount(msg: Message, state: FSMContext):
             await msg.answer("Введите корректную сумму (число) или '.' для значения по умолчанию")
             return
     
-    await msg.answer("Введите дату платежа (YYYY-MM-DD) или '.' (точку) чтобы указать сегодняшнее число:")
+    await msg.answer("Введите дату платежа (ДД-ММ-ГГГГ или ДД.ММ.ГГГГ) либо '.' для сегодняшней даты:")
     await state.set_state(AddPayment.payment_date)
 
 @router.message(AddPayment.payment_date)
@@ -130,9 +130,10 @@ async def input_payment_date(msg: Message, state: FSMContext):
         if msg.text.lower() == ".":
             payment_date = date.today() + timedelta(days=0)  # Сегодняшняя дата
         else:
-            payment_date = date.fromisoformat(msg.text)
+            normalized = msg.text.replace(".", "-")
+            payment_date = datetime.strptime(normalized, "%d-%m-%Y").date()
     except ValueError:
-        await msg.answer("Введите дату в формате YYYY-MM-DD или '.' (точку) для сегодняшней даты")
+        await msg.answer("Введите дату в формате ДД-ММ-ГГГГ или ДД.ММ.ГГГГ, либо '.' для сегодняшней даты")
         return
     
     data = await state.get_data()

@@ -3,7 +3,17 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from db import get_all_machines, update_machine_full_price, update_machine_deal_type, update_machine_1c, update_machine_rent_price, get_payments_by_machine, get_all_machine_models, get_last_payment_date
+from db import (
+    get_all_machines,
+    update_machine_full_price,
+    update_machine_deal_type,
+    update_machine_1c,
+    update_machine_rent_price,
+    update_machine_status,
+    get_payments_by_machine,
+    get_all_machine_models,
+    get_last_payment_date,
+)
 from datetime import date, timedelta
 
 router = Router()
@@ -144,6 +154,7 @@ async def select_client(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text="📊 Изменить тип сделки", callback_data="edit_dealtype")],
         [InlineKeyboardButton(text="🏢 Изменить 1С статус", callback_data="edit_1c")],
         [InlineKeyboardButton(text="💵 Изменить аренду", callback_data="edit_rent")],
+        [InlineKeyboardButton(text="🔚 Закрыть сделку", callback_data="close_deal")],
     ])
     await callback.message.answer("Выберите действие для изменения:", reply_markup=kb)
     await state.set_state(EditFSM.action)
@@ -305,6 +316,24 @@ async def edit_rent_start(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Клиент не найден!")
     
     await state.set_state(EditFSM.new_rent)
+    await callback.answer()
+
+
+@router.callback_query(EditFSM.action, F.data == "close_deal")
+async def close_deal(callback: CallbackQuery, state: FSMContext):
+    """Закрыть аренду без выкупа: статус 'returned', buyout=False."""
+    data = await state.get_data()
+    machines = await get_all_machines()
+    machine = next((m for m in machines if m.id == data.get("machine_id")), None)
+
+    if not machine:
+        await callback.message.answer("Клиент не найден!")
+        await callback.answer()
+        return
+
+    await update_machine_status(machine.id, status="returned", buyout=False, buyout_date=None)
+    await callback.message.answer("Сделка закрыта, кофемашина возвращена.")
+    await state.clear()
     await callback.answer()
 
 @router.message(EditFSM.new_rent)
