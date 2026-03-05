@@ -1,6 +1,6 @@
 import pytest
 from io import BytesIO
-from utils.excel import generate_excel_report
+from utils.excel import generate_excel_report, generate_profit_share_report
 import pandas as pd
 from datetime import date
 
@@ -131,3 +131,45 @@ class TestGenerateExcelReport:
 
 
 
+
+
+class TestGenerateProfitShareReport:
+    def test_month_columns_are_dropped_per_sheet_when_empty(self):
+        rows = [
+            {
+                "Месяц старта": "2026-01",
+                "Дата первого платежа": date(2026, 1, 10),
+                "Дата оформления": date(2026, 1, 1),
+                "Арендатор": "A",
+                "Тип сделки": "Аренда",
+                "Модель": "M1",
+                "Аренда": 10000.0,
+                "Статус": "active",
+                "2026-01": 10000.0,
+                "2026-02": None,
+            },
+            {
+                "Месяц старта": "2026-02",
+                "Дата первого платежа": date(2026, 2, 10),
+                "Дата оформления": date(2026, 2, 1),
+                "Арендатор": "B",
+                "Тип сделки": "Рассрочка",
+                "Модель": "M2",
+                "Аренда": 9000.0,
+                "Статус": "active",
+                "2026-01": None,
+                "2026-02": 9000.0,
+            },
+        ]
+
+        result = generate_profit_share_report(rows)
+        result.seek(0)
+
+        df_2026_01 = pd.read_excel(result, sheet_name="2026-01")
+        result.seek(0)
+        df_2026_02 = pd.read_excel(result, sheet_name="2026-02")
+
+        assert "2026-01" in df_2026_01.columns
+        assert "2026-02" not in df_2026_01.columns
+        assert "2026-02" in df_2026_02.columns
+        assert "2026-01" not in df_2026_02.columns

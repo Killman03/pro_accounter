@@ -261,102 +261,34 @@ async def send_summary(msg: Message):
     await msg.answer(text) 
 
 
-def _calc_rent_share(rent: float, is_first_month: bool) -> float:
-    if is_first_month:
-        return rent / 4
-    if rent >= 10000:
-        return 1500
-    if rent >= 8000:
-        return 1000
-    return 500
-
-
-def _calc_buyout_share(full_price: float) -> float:
-    if full_price and full_price > 80000:
-        return 2000
-    if full_price and full_price > 30000:
-        return 1000
-    return 500
-
-
 @router.message(Command("profit"))
 async def send_profit_share(msg: Message):
     """
-    Формирует Excel с выплатами Андрею.
-    Лист = месяц старта арендатора, продолжения аренды добавляются помесячно,
-    пока нет выкупа/закрытия.
+    Формирует Excel с выплатами.
+    Лист = месяц старта арендатора.
+    В месячных колонках отражаются только фактические платежи из БД,
+    без деления сумм и без автодоначисления пустых месяцев.
     """
     machines = await get_all_machines()
-    models = {m.name: m for m in await get_all_machine_models()}
-
     rows = []
-    today_month = date.today().replace(day=1)
 
     for m in machines:
         payments = await get_payments_by_machine(m.id)
         payments = sorted(payments, key=lambda p: p.payment_date)
         first_payment_dt = payments[0].payment_date if payments else m.start_date
-        first_month = (first_payment_dt.year, first_payment_dt.month)
-        buyout_done = False
-        buyout_month: tuple[int, int] | None = None
         start_month_label = first_payment_dt.strftime("%Y-%m")
-        last_payment_dt = payments[-1].payment_date if payments else first_payment_dt
-
-        # последний месяц начислений
-        end_month = (today_month.year, today_month.month)
-        if m.status != "active":
-            end_month = (last_payment_dt.year, last_payment_dt.month)
 
         month_payouts: dict[str, float] = {}
-
-        # учитываем фактические платежи (особенно выкуп)
         for p in payments:
-            month_key = (p.payment_date.year, p.payment_date.month)
             month_label = p.payment_date.strftime("%Y-%m")
+            month_payouts[month_label] = month_payouts.get(month_label, 0) + p.amount
 
-            if p.is_buyout:
-                full_price = m.full_price if m.full_price else (models[m.model].full_price if m.model in models else 0)
-                month_payouts[month_label] = month_payouts.get(month_label, 0) + _calc_buyout_share(full_price)
-                buyout_done = True
-                buyout_month = month_key
-            elif p.is_deposit:
-                continue
-            else:
-                if buyout_done or m.status != "active":
-                    continue
-                is_first_month = month_key == first_month
-                month_payouts[month_label] = month_payouts.get(month_label, 0) + _calc_rent_share(m.rent_price, is_first_month)
-
-            if p.is_buyout:
-                buyout_done = True
-
-        # продолжаем начислять аренду до текущего месяца
-        # если был выкуп — только до месяца перед выкупом
-        accrual_needed = True if buyout_month or (m.status == "active") or (not buyout_done) else False
-        if accrual_needed:
-            accrual_end = end_month
-            if buyout_month:
-                yb, mb = buyout_month
-                accrual_end = (yb - 1, 12) if mb == 1 else (yb, mb - 1)
-
-            y, mth = first_month
-            while (y, mth) <= accrual_end:
-                month_label = f"{y:04d}-{mth:02d}"
-                is_first_month = (y, mth) == first_month
-                if month_label not in month_payouts:
-                    month_payouts[month_label] = _calc_rent_share(m.rent_price, is_first_month)
-                if mth == 12:
-                    y += 1
-                    mth = 1
-                else:
-                    mth += 1
-
-        # строка для листа месяца старта
         row_base = {
             "Месяц старта": start_month_label,
             "Дата первого платежа": first_payment_dt,
             "Дата оформления": m.start_date,
             "Арендатор": m.tenant,
+            "Тип сделки": m.deal_type,
             "Модель": m.model,
             "Аренда": m.rent_price,
             "Статус": m.status,

@@ -43,18 +43,13 @@ def generate_profit_share_report(rows: list[dict]) -> BytesIO:
             if "Дата платежа" in df.columns:
                 df.sort_values(by="Дата платежа", inplace=True, ignore_index=True)
 
-            # убираем месячные столбцы без выплат (все пусто или 0)
-            month_cols = [c for c in df.columns if re.fullmatch(r"\d{4}-\d{2}", str(c))]
-            drop_cols = []
-            for c in month_cols:
-                col = df[c]
-                if col.isna().all() or col.fillna(0).eq(0).all():
-                    drop_cols.append(c)
-            if drop_cols:
-                df = df.drop(columns=drop_cols)
+            # Drop month columns without payments for the full dataset.
+            df = _drop_empty_month_columns(df)
 
             if "Месяц старта" in df.columns:
                 for month, df_month in df.groupby("Месяц старта"):
+                    # Also drop empty month columns per each sheet.
+                    df_month = _drop_empty_month_columns(df_month)
                     df_month.to_excel(writer, sheet_name=month, index=False)
                     wrote_any = True
             else:
@@ -92,3 +87,15 @@ def _autosize_all_sheets(writer: pd.ExcelWriter) -> None:
                     continue
             adjusted_width = max_length + 2 if max_length else 10
             ws.column_dimensions[get_column_letter(idx)].width = adjusted_width
+
+
+def _drop_empty_month_columns(df: pd.DataFrame) -> pd.DataFrame:
+    month_cols = [c for c in df.columns if re.fullmatch(r"\d{4}-\d{2}", str(c))]
+    drop_cols = []
+    for c in month_cols:
+        col = df[c]
+        if col.isna().all() or col.fillna(0).eq(0).all():
+            drop_cols.append(c)
+    if drop_cols:
+        return df.drop(columns=drop_cols)
+    return df
