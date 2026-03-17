@@ -18,6 +18,14 @@ from datetime import date, timedelta
 
 router = Router()
 
+
+async def _get_machine_payments(machine):
+    payments_rel = getattr(machine, "payments_rel", None)
+    if isinstance(payments_rel, list) and hasattr(machine, "__sa_instance_state"):
+        return sorted(payments_rel, key=lambda p: p.payment_date)
+    payments = await get_payments_by_machine(machine.id)
+    return sorted(payments, key=lambda p: p.payment_date)
+
 async def get_client_info(machine):
     """Получает подробную информацию о клиенте"""
     # Получаем модель машины для полной стоимости
@@ -25,12 +33,12 @@ async def get_client_info(machine):
     full_price = machine.full_price if machine.full_price else (models[machine.model].full_price if machine.model in models else 0)
     
     # Получаем все платежи
-    all_payments = await get_payments_by_machine(machine.id)
+    all_payments = await _get_machine_payments(machine)
     total_paid = sum(p.amount for p in all_payments) + (machine.deposit if machine.deposit else 0)
     remaining = max(full_price - total_paid, 0)
     
     # Получаем дату последнего платежа
-    last_payment_date = await get_last_payment_date(machine.id)
+    last_payment_date = all_payments[-1].payment_date if all_payments else None
     if last_payment_date is None:
         last_payment_date = machine.start_date
     
@@ -91,11 +99,11 @@ async def show_clients(msg: Message, state: FSMContext):
     kb_buttons = []
     for m in active_machines:
         # Получаем информацию о платежах
-        all_payments = await get_payments_by_machine(m.id)
+        all_payments = await _get_machine_payments(m)
         total_paid = sum(p.amount for p in all_payments) + (m.deposit if m.deposit else 0)
         
         # Получаем дату последнего платежа
-        last_payment_date = await get_last_payment_date(m.id)
+        last_payment_date = all_payments[-1].payment_date if all_payments else None
         if last_payment_date is None:
             last_payment_date = m.start_date
         

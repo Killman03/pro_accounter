@@ -1,10 +1,17 @@
 from aiogram import Router
 from aiogram.types import Message
-from db import get_all_machines, get_last_payment_date
+from db import get_all_machines
 from datetime import date, timedelta
 import asyncio
 
 router = Router()
+
+
+def _last_payment_date(machine):
+    payments = machine.payments_rel or []
+    if not payments:
+        return None
+    return max(p.payment_date for p in payments)
 
 # Здесь будет логика автонапоминаний о платежах 
 
@@ -16,7 +23,7 @@ async def reminders_task(bot, chat_id):
                 continue
             
             # Получаем дату последнего платежа
-            last_payment_date = await get_last_payment_date(machine.id)
+            last_payment_date = _last_payment_date(machine)
             
             # Если платежей нет, используем дату начала сделки
             if last_payment_date is None:

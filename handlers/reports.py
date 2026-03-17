@@ -6,8 +6,27 @@ from utils.excel import generate_excel_report, generate_profit_share_report
 from datetime import date, timedelta, datetime
 from utils.plots import plot_top_models, plot_starts_per_day, plot_starts_per_week
 import asyncio
+import logging
 
 router = Router()
+logger = logging.getLogger(__name__)
+
+
+async def _get_machine_payments(machine):
+    payments_rel = getattr(machine, "payments_rel", None)
+    if isinstance(payments_rel, list) and hasattr(machine, "__sa_instance_state"):
+        return sorted(payments_rel, key=lambda p: p.payment_date)
+    payments = await get_payments_by_machine(machine.id)
+    return sorted(payments, key=lambda p: p.payment_date)
+
+
+async def _get_last_payment_date(machine):
+    payments_rel = getattr(machine, "payments_rel", None)
+    if isinstance(payments_rel, list) and hasattr(machine, "__sa_instance_state"):
+        if not payments_rel:
+            return None
+        return max(p.payment_date for p in payments_rel)
+    return await get_last_payment_date(machine.id)
 
 # Здесь будет логика генерации Excel-отчетов и графиков 
 
@@ -30,7 +49,7 @@ async def send_excel_report(msg: Message):
         # Получаем полную стоимость (индивидуальная или из модели)
         full_price = m.full_price if m.full_price else (models[m.model].full_price if m.model in models else 0)
         # Считаем сумму всех платежей (включая депозиты)
-        all_payments = await get_payments_by_machine(m.id)
+        all_payments = await _get_machine_payments(m)
         total_paid = sum(p.amount for p in all_payments) + (m.deposit if m.deposit else 0)
         remain = full_price - total_paid
         
@@ -77,7 +96,7 @@ async def send_excel_report(msg: Message):
         # Получаем полную стоимость
         full_price = m.full_price if m.full_price else (models[m.model].full_price if m.model in models else 0)
         # Считаем сумму всех платежей (включая депозиты)
-        all_payments = await get_payments_by_machine(m.id)
+        all_payments = await _get_machine_payments(m)
         total_paid = sum(p.amount for p in all_payments)
         remain = max(full_price - total_paid, 0)
         
@@ -109,9 +128,15 @@ async def send_excel_report(msg: Message):
                 "Остаток к доплате": remain_p,
             })
     
-    excel = generate_excel_report(active_machines_data, payments_data, closed_machines_data)
-    excel.seek(0)
-    await msg.answer_document(BufferedInputFile(excel.read(), filename="coffee_report.xlsx"))
+    try:
+        excel = generate_excel_report(active_machines_data, payments_data, closed_machines_data)
+        excel.seek(0)
+        payload = excel.read()
+        logger.info("Excel report generated: bytes=%s", len(payload))
+        await msg.answer_document(BufferedInputFile(payload, filename="coffee_report.xlsx"))
+    except Exception:
+        logger.exception("Failed to generate/send Excel report")
+        await msg.answer("Не удалось сформировать Excel-отчет. Попробуйте позже.")
 
 @router.message(Command("plot"))
 async def choose_plot(msg: Message):
@@ -154,8 +179,7 @@ async def plot_starts(msg: Message):
     day_counts = {}
 
     for m in machines:
-        payments = await get_payments_by_machine(m.id)
-        payments = sorted(payments, key=lambda p: p.payment_date)
+        payments = await _get_machine_payments(m)
         if not payments:
             continue
         first_payment = payments[0].payment_date
@@ -202,8 +226,7 @@ async def plot_starts_week(msg: Message):
     week_ranges = {}
 
     for m in machines:
-        payments = await get_payments_by_machine(m.id)
-        payments = sorted(payments, key=lambda p: p.payment_date)
+        payments = await _get_machine_payments(m)
         if not payments:
             continue
         first_payment = payments[0].payment_date
@@ -243,7 +266,7 @@ async def send_summary(msg: Message):
         if m.status != "active":
             continue
         # Получаем дату последнего платежа
-        last_payment_date = await get_last_payment_date(m.id)
+        last_payment_date = await _get_last_payment_date(m)
         if last_payment_date is None:
             last_payment_date = m.start_date
         
@@ -273,8 +296,7 @@ async def send_profit_share(msg: Message):
     rows = []
 
     for m in machines:
-        payments = await get_payments_by_machine(m.id)
-        payments = sorted(payments, key=lambda p: p.payment_date)
+        payments = await _get_machine_payments(m)
         first_payment_dt = payments[0].payment_date if payments else m.start_date
         start_month_label = first_payment_dt.strftime("%Y-%m")
 
@@ -297,5 +319,11 @@ async def send_profit_share(msg: Message):
             row_base[ml] = val
         rows.append(row_base)
 
-    excel = generate_profit_share_report(rows)
-    await msg.answer_document(BufferedInputFile(excel.read(), filename="profit_share.xlsx"))
+    try:
+        excel = generate_profit_share_report(rows)
+        payload = excel.read()
+        logger.info("Profit report generated: bytes=%s", len(payload))
+        await msg.answer_document(BufferedInputFile(payload, filename="profit_share.xlsx"))
+    except Exception:
+        logger.exception("Failed to generate/send profit report")
+        await msg.answer("Не удалось сформировать Excel-отчет по выплатам. Попробуйте позже.")

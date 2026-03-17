@@ -1,24 +1,25 @@
-import pandas as pd
 import re
 from io import BytesIO
-from openpyxl.utils import get_column_letter
+
 import pandas as pd
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+from openpyxl.utils import get_column_letter
 
 def generate_excel_report(active_machines_data: list[dict], payments_data: list[dict], closed_machines_data: list[dict] = None) -> BytesIO:
     output = BytesIO()
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         # Первый лист - активные кофемашины
-        df_active = pd.DataFrame(active_machines_data)
+        df_active = _sanitize_dataframe_for_excel(pd.DataFrame(active_machines_data))
         df_active.to_excel(writer, sheet_name='Активные сделки', index=False)
         
         # Второй лист - платежи
-        df_payments = pd.DataFrame(payments_data)
+        df_payments = _sanitize_dataframe_for_excel(pd.DataFrame(payments_data))
         df_payments.to_excel(writer, sheet_name='Платежи', index=False)
         
         # Третий лист - закрытые сделки (если есть данные)
         if closed_machines_data:
-            df_closed = pd.DataFrame(closed_machines_data)
+            df_closed = _sanitize_dataframe_for_excel(pd.DataFrame(closed_machines_data))
             df_closed.to_excel(writer, sheet_name='Закрытые сделки', index=False)
 
         _autosize_all_sheets(writer)
@@ -34,7 +35,7 @@ def generate_profit_share_report(rows: list[dict]) -> BytesIO:
     """
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df = pd.DataFrame(rows) if rows else pd.DataFrame([])
+        df = _sanitize_dataframe_for_excel(pd.DataFrame(rows) if rows else pd.DataFrame([]))
         wrote_any = False
         if df.empty:
             df.to_excel(writer, sheet_name="Нет данных", index=False)
@@ -99,3 +100,21 @@ def _drop_empty_month_columns(df: pd.DataFrame) -> pd.DataFrame:
     if drop_cols:
         return df.drop(columns=drop_cols)
     return df
+
+
+def _sanitize_dataframe_for_excel(df: pd.DataFrame) -> pd.DataFrame:
+    """Удаляет недопустимые для openpyxl управляющие символы в строковых полях."""
+    if df.empty:
+        return df
+
+    cleaned = df.copy()
+    object_cols = cleaned.select_dtypes(include=["object"]).columns
+    for col in object_cols:
+        cleaned[col] = cleaned[col].map(_sanitize_excel_value)
+    return cleaned
+
+
+def _sanitize_excel_value(value):
+    if isinstance(value, str):
+        return ILLEGAL_CHARACTERS_RE.sub("", value)
+    return value
