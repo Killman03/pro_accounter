@@ -1,6 +1,7 @@
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from config import BOT_TOKEN, ADMIN_ID
+from aiogram.client.session.aiohttp import AiohttpSession
+from config import BOT_TOKEN, ADMIN_ID, TG_PROXY, TG_PROXY_URL
 from db import init_db
 from handlers.add_machine import router as add_machine_router, start_add_machine
 from handlers.reports import router as reports_router, send_excel_report, choose_plot, send_summary
@@ -15,6 +16,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from keyboards import main_menu_kb
+from urllib.parse import quote
 
 # Укажите свой chat_id для напоминаний
 ADMIN_CHAT_ID = ADMIN_ID
@@ -35,9 +37,42 @@ class DeleteMachineFSM(StatesGroup):
 class DeletePaymentFSM(StatesGroup):
     waiting_input = State()
 
+
+def _build_proxy_url(proxy_value: str) -> str:
+    value = (proxy_value or "").strip()
+    if not value:
+        return ""
+
+    if "://" in value:
+        return value
+
+    parts = value.split(":")
+    if len(parts) == 2:
+        host, port = parts
+        return f"socks5://{host}:{port}"
+
+    if len(parts) == 4:
+        host, port, username, password = parts
+        user_enc = quote(username, safe="")
+        pass_enc = quote(password, safe="")
+        return f"socks5://{user_enc}:{pass_enc}@{host}:{port}"
+
+    raise ValueError(
+        "Invalid proxy format. Use TG_PROXY=host:port:username:password "
+        "or TG_PROXY=host:port"
+    )
+
+
 async def main():
     await init_db()
-    bot = Bot(token=BOT_TOKEN)
+    proxy_value = TG_PROXY or TG_PROXY_URL
+    proxy_url = _build_proxy_url(proxy_value) if proxy_value else ""
+
+    if proxy_url:
+        session = AiohttpSession(proxy=proxy_url)
+        bot = Bot(token=BOT_TOKEN, session=session)
+    else:
+        bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
     setup_routers(dp)
 
