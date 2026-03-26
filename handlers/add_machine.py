@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from db import add_coffee_machine, get_all_machine_models
 from utils.models_list import MODELS
+from utils.meta_capi import send_new_user_to_meta_capi
 from utils.validators import validate_kg_phone, normalize_kg_phone
 from datetime import date, timedelta
 from keyboards import main_menu_kb
@@ -123,7 +124,7 @@ async def input_comment(msg: Message, state: FSMContext):
     comment = None if msg.text.strip() == '-' else msg.text.strip()
     await state.update_data(comment=comment)
     data = await state.get_data()
-    await add_coffee_machine({
+    machine = await add_coffee_machine({
         "model": data["model"],
         "barcode": data["barcode"],
         "rent_price": data["rent_price"],
@@ -139,5 +140,6 @@ async def input_comment(msg: Message, state: FSMContext):
         "deal_type": data["deal_type"],
         "comment": data["comment"]
     })
+    await send_new_user_to_meta_capi(data, lead_id=getattr(machine, "id", None))
     await msg.answer("Кофемашина успешно добавлена!")
     await state.clear() 

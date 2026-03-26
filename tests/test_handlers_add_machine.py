@@ -334,7 +334,10 @@ class TestInputComment:
             "comment": None
         })
         
-        with patch('handlers.add_machine.add_coffee_machine', new_callable=AsyncMock):
+        with (
+            patch('handlers.add_machine.add_coffee_machine', new_callable=AsyncMock),
+            patch('handlers.add_machine.send_new_user_to_meta_capi', new_callable=AsyncMock),
+        ):
             await input_comment(mock_msg, mock_state)
             
             mock_state.update_data.assert_called()
@@ -360,7 +363,10 @@ class TestInputComment:
             "comment": None
         })
         
-        with patch('handlers.add_machine.add_coffee_machine', new_callable=AsyncMock):
+        with (
+            patch('handlers.add_machine.add_coffee_machine', new_callable=AsyncMock),
+            patch('handlers.add_machine.send_new_user_to_meta_capi', new_callable=AsyncMock),
+        ):
             await input_comment(mock_msg, mock_state)
             
             mock_state.update_data.assert_called()
