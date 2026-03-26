@@ -25,6 +25,8 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       ADMIN_ID: ${ADMIN_ID}
+      TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL}
+      STARTUP_MAX_TELEGRAM_LATENCY_MS: ${STARTUP_MAX_TELEGRAM_LATENCY_MS:-2000}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}

@@ -1,7 +1,9 @@
 import asyncio
+from time import perf_counter
+from urllib.parse import urlsplit
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.session.aiohttp import AiohttpSession
-from config import BOT_TOKEN, ADMIN_ID, TG_PROXY, TG_PROXY_URL
+from config import BOT_TOKEN, ADMIN_ID, TELEGRAM_PROXY_URL, STARTUP_MAX_TELEGRAM_LATENCY_MS
 from db import init_db
 from handlers.add_machine import router as add_machine_router, start_add_machine
 from handlers.reports import router as reports_router, send_excel_report, choose_plot, send_summary
@@ -16,7 +18,6 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from keyboards import main_menu_kb
-from urllib.parse import quote
 
 # Укажите свой chat_id для напоминаний
 ADMIN_CHAT_ID = ADMIN_ID
@@ -38,38 +39,38 @@ class DeletePaymentFSM(StatesGroup):
     waiting_input = State()
 
 
-def _build_proxy_url(proxy_value: str) -> str:
-    value = (proxy_value or "").strip()
-    if not value:
-        return ""
+def _proxy_public_label(proxy_url: str) -> str:
+    if not proxy_url:
+        return "disabled"
 
-    if "://" in value:
-        return value
+    parsed = urlsplit(proxy_url)
+    host = parsed.hostname or "unknown-host"
+    port = parsed.port or "unknown-port"
+    user = parsed.username or "unknown-user"
+    scheme = parsed.scheme or "unknown-scheme"
+    return f"{scheme}://{user}:***@{host}:{port}"
 
-    parts = value.split(":")
-    if len(parts) == 2:
-        host, port = parts
-        return f"socks5://{host}:{port}"
 
-    if len(parts) == 4:
-        host, port, username, password = parts
-        user_enc = quote(username, safe="")
-        pass_enc = quote(password, safe="")
-        return f"socks5://{user_enc}:{pass_enc}@{host}:{port}"
-
-    raise ValueError(
-        "Invalid proxy format. Use TG_PROXY=host:port:username:password "
-        "or TG_PROXY=host:port"
+async def _send_startup_proxy_status(bot: Bot, admin_chat_id: int, proxy_url: str) -> None:
+    started = perf_counter()
+    await bot.get_me()
+    latency_ms = int((perf_counter() - started) * 1000)
+    latency_state = "OK" if latency_ms <= STARTUP_MAX_TELEGRAM_LATENCY_MS else "SLOW"
+    status_text = (
+        "✅ Бот запущен.\n"
+        f"Proxy: {_proxy_public_label(proxy_url)}\n"
+        f"Telegram API: reachable ({latency_ms} ms, {latency_state})\n"
+        "Трафик aiogram направлен через указанный proxy."
     )
+    await bot.send_message(admin_chat_id, status_text)
+    print(status_text)
 
 
 async def main():
     await init_db()
-    proxy_value = TG_PROXY or TG_PROXY_URL
-    proxy_url = _build_proxy_url(proxy_value) if proxy_value else ""
 
-    if proxy_url:
-        session = AiohttpSession(proxy=proxy_url)
+    if TELEGRAM_PROXY_URL:
+        session = AiohttpSession(proxy=TELEGRAM_PROXY_URL)
         bot = Bot(token=BOT_TOKEN, session=session)
     else:
         bot = Bot(token=BOT_TOKEN)
@@ -182,6 +183,7 @@ async def main():
 
     # Запуск автонапоминаний в фоне
     asyncio.create_task(reminders_task(bot, ADMIN_CHAT_ID))
+    await _send_startup_proxy_status(bot, ADMIN_CHAT_ID, TELEGRAM_PROXY_URL)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

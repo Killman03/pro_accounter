@@ -5,8 +5,8 @@ load_dotenv()  # Загружает переменные из .env
 
 BOT_TOKEN = os.getenv('BOT_TOKEN', '')
 ADMIN_ID = int(os.getenv('ADMIN_ID', 5717967396))  # Замените на свой Telegram ID
-TG_PROXY = os.getenv('TG_PROXY', '').strip()
-TG_PROXY_URL = os.getenv('TG_PROXY_URL', '').strip()
+TELEGRAM_PROXY_URL = os.getenv('TELEGRAM_PROXY_URL', '').strip()
+STARTUP_MAX_TELEGRAM_LATENCY_MS = int(os.getenv('STARTUP_MAX_TELEGRAM_LATENCY_MS', 2000))
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = int(os.getenv('DB_PORT', 5432))
 DB_USER = os.getenv('DB_USER', 'postgres')
