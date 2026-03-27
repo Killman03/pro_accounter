@@ -14,8 +14,10 @@ from config import (
     META_CAPI_LEAD_EVENT_SOURCE,
     META_CAPI_TEST_EVENT_CODE,
 )
+from utils.telegram_dev_logger import send_dev_log
 
 logger = logging.getLogger(__name__)
+MAX_EVENT_AGE_SECONDS = 7 * 24 * 60 * 60
 
 
 def _sha256_normalized(value: str) -> str:
@@ -52,6 +54,18 @@ def _to_unix_timestamp(value: Any) -> int:
     return int(time())
 
 
+def _event_time_within_7_days(value: Any) -> Optional[int]:
+    ts = _to_unix_timestamp(value)
+    now_ts = int(time())
+    min_ts = now_ts - MAX_EVENT_AGE_SECONDS
+
+    if ts < min_ts:
+        return None
+    if ts > now_ts:
+        return now_ts
+    return ts
+
+
 async def send_new_user_to_meta_capi(
     machine_data: Mapping[str, Any],
     lead_id: Optional[int] = None,
@@ -79,11 +93,19 @@ async def send_new_user_to_meta_capi(
         logger.warning("Meta CAPI: no user data available for lead event")
         return False
 
+    safe_event_time = _event_time_within_7_days(event_time)
+    if safe_event_time is None:
+        logger.warning("Meta CAPI skipped: event_time is older than 7 days")
+        await send_dev_log(
+            f"Meta CAPI skipped: event={event_name}, lead_id={lead_id}, reason=event_time_older_than_7_days"
+        )
+        return False
+
     payload: dict[str, Any] = {
         "data": [
             {
                 "event_name": event_name,
-                "event_time": _to_unix_timestamp(event_time),
+                "event_time": safe_event_time,
                 "action_source": "system_generated",
                 "custom_data": {
                     "event_source": "crm",
@@ -106,8 +128,15 @@ async def send_new_user_to_meta_capi(
                 if resp.status >= 400:
                     body = await resp.text()
                     logger.warning("Meta CAPI failed: status=%s body=%s", resp.status, body)
+                    await send_dev_log(
+                        f"Meta CAPI failed: event={event_name}, lead_id={lead_id}, status={resp.status}, body={body[:800]}"
+                    )
                     return False
+        await send_dev_log(
+            f"Meta CAPI sent: event={event_name}, lead_id={lead_id}, event_time={safe_event_time}"
+        )
         return True
     except Exception:
         logger.exception("Meta CAPI request error")
+        await send_dev_log(f"Meta CAPI exception: event={event_name}, lead_id={lead_id}")
         return False
