@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+from datetime import date, datetime, timezone
 from time import time
 from typing import Any, Mapping, Optional
 
@@ -36,7 +37,27 @@ def _enabled() -> bool:
     return bool(META_CAPI_ACCESS_TOKEN and META_CAPI_DATASET_ID)
 
 
-async def send_new_user_to_meta_capi(machine_data: Mapping[str, Any], lead_id: Optional[int] = None) -> bool:
+def _to_unix_timestamp(value: Any) -> int:
+    if value is None:
+        return int(time())
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return int(value.timestamp())
+    if isinstance(value, date):
+        dt = datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    return int(time())
+
+
+async def send_new_user_to_meta_capi(
+    machine_data: Mapping[str, Any],
+    lead_id: Optional[int] = None,
+    event_time: Any = None,
+    event_name: str = "Lead",
+) -> bool:
     if not _enabled():
         return False
 
@@ -61,8 +82,8 @@ async def send_new_user_to_meta_capi(machine_data: Mapping[str, Any], lead_id: O
     payload: dict[str, Any] = {
         "data": [
             {
-                "event_name": "Lead",
-                "event_time": int(time()),
+                "event_name": event_name,
+                "event_time": _to_unix_timestamp(event_time),
                 "action_source": "system_generated",
                 "custom_data": {
                     "event_source": "crm",

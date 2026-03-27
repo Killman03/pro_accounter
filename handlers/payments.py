@@ -12,6 +12,7 @@ from models import CoffeeMachineORM
 from db import get_machine_model_by_name
 from db import get_all_machine_models
 from db import get_payments_by_machine
+from utils.meta_capi import send_new_user_to_meta_capi
 
 
 router = Router()
@@ -151,8 +152,10 @@ async def input_payment_date(msg: Message, state: FSMContext):
     # Получаем данные машины для tenant
     machines = await get_all_machines()
     machine = next((m for m in machines if m.id == data["machine_id"]), None)
+    existing_payments = []
     if machine:
         payment_data["tenant"] = machine.tenant
+        existing_payments = await get_payments_by_machine(machine.id)
         
         # Обновляем статус машины в зависимости от типа платежа
         async with AsyncSessionLocal() as session:
@@ -172,6 +175,12 @@ async def input_payment_date(msg: Message, state: FSMContext):
             await session.commit()
     
     await add_payment(payment_data)
+    if machine and len(existing_payments) == 0:
+        await send_new_user_to_meta_capi(
+            {"tenant": machine.tenant, "phone": machine.phone},
+            lead_id=machine.id,
+            event_time=payment_date,
+        )
     
     await msg.answer(f"Платеж успешно добавлен!\n"
                     f"Тип: {data['payment_type']}\n"

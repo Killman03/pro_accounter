@@ -214,18 +214,22 @@ class TestInputPaymentDate:
             "amount": 50000.0
         })
         
-        with patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
-            with patch('handlers.payments.add_payment', new_callable=AsyncMock):
-                with patch('handlers.payments.AsyncSessionLocal') as mock_session_local:
-                    mock_session = AsyncMock()
-                    mock_session_local.return_value.__aenter__.return_value = mock_session
-                    mock_session.execute = AsyncMock()
-                    mock_session.commit = AsyncMock()
-                    
-                    await input_payment_date(mock_msg, mock_state)
-                    
-                    mock_msg.answer.assert_called_once()
-                    mock_state.clear.assert_called_once()
+        with (
+            patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.add_payment', new_callable=AsyncMock),
+            patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
+        ):
+            mock_session = AsyncMock()
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session.execute = AsyncMock()
+            mock_session.commit = AsyncMock()
+
+            await input_payment_date(mock_msg, mock_state)
+
+            mock_msg.answer.assert_called_once()
+            mock_state.clear.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_input_payment_date_custom(self, mock_coffee_machine):
@@ -240,18 +244,22 @@ class TestInputPaymentDate:
             "amount": 50000.0
         })
         
-        with patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
-            with patch('handlers.payments.add_payment', new_callable=AsyncMock):
-                with patch('handlers.payments.AsyncSessionLocal') as mock_session_local:
-                    mock_session = AsyncMock()
-                    mock_session_local.return_value.__aenter__.return_value = mock_session
-                    mock_session.execute = AsyncMock()
-                    mock_session.commit = AsyncMock()
-                    
-                    await input_payment_date(mock_msg, mock_state)
-                    
-                    mock_msg.answer.assert_called_once()
-                    mock_state.clear.assert_called_once()
+        with (
+            patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.add_payment', new_callable=AsyncMock),
+            patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
+        ):
+            mock_session = AsyncMock()
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session.execute = AsyncMock()
+            mock_session.commit = AsyncMock()
+
+            await input_payment_date(mock_msg, mock_state)
+
+            mock_msg.answer.assert_called_once()
+            mock_state.clear.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_input_payment_date_invalid(self):
@@ -280,18 +288,22 @@ class TestInputPaymentDate:
             "amount": 200000.0
         })
         
-        with patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
-            with patch('handlers.payments.add_payment', new_callable=AsyncMock):
-                with patch('handlers.payments.AsyncSessionLocal') as mock_session_local:
-                    mock_session = AsyncMock()
-                    mock_session_local.return_value.__aenter__.return_value = mock_session
-                    mock_session.execute = AsyncMock()
-                    mock_session.commit = AsyncMock()
-                    
-                    await input_payment_date(mock_msg, mock_state)
-                    
-                    mock_session.execute.assert_called()
-                    mock_session.commit.assert_called()
-                    mock_msg.answer.assert_called_once()
-                    mock_state.clear.assert_called_once()
+        with (
+            patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.add_payment', new_callable=AsyncMock),
+            patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
+        ):
+            mock_session = AsyncMock()
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session.execute = AsyncMock()
+            mock_session.commit = AsyncMock()
+
+            await input_payment_date(mock_msg, mock_state)
+
+            mock_session.execute.assert_called()
+            mock_session.commit.assert_called()
+            mock_msg.answer.assert_called_once()
+            mock_state.clear.assert_called_once()
 
