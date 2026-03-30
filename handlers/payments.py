@@ -13,9 +13,19 @@ from db import get_machine_model_by_name
 from db import get_all_machine_models
 from db import get_payments_by_machine
 from utils.meta_capi import send_new_user_to_meta_capi
+from config import META_CAPI_CURRENCY
 
 
 router = Router()
+
+
+def _get_payment_event_value(payment_type: str, amount: float) -> float | None:
+    if payment_type == "rent":
+        return round(amount * 0.5, 2)
+    if payment_type == "buyout":
+        return round(amount * 0.1, 2)
+    return None
+
 
 class AddPayment(StatesGroup):
     select_machine = State()
@@ -181,6 +191,20 @@ async def input_payment_date(msg: Message, state: FSMContext):
             lead_id=machine.id,
             event_time=payment_date,
         )
+    if machine:
+        event_value = _get_payment_event_value(data["payment_type"], float(data["amount"]))
+        if event_value is not None:
+            await send_new_user_to_meta_capi(
+                {"tenant": machine.tenant, "phone": machine.phone},
+                lead_id=machine.id,
+                event_time=payment_date,
+                event_name="Purchase",
+                custom_data={
+                    "value": event_value,
+                    "currency": META_CAPI_CURRENCY,
+                    "payment_type": data["payment_type"],
+                },
+            )
     
     await msg.answer(f"Платеж успешно добавлен!\n"
                     f"Тип: {data['payment_type']}\n"

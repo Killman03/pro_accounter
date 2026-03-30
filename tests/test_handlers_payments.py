@@ -248,7 +248,7 @@ class TestInputPaymentDate:
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
-            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
             patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
         ):
             mock_session = AsyncMock()
@@ -258,6 +258,16 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
+            assert mock_send_capi.await_count == 2
+            purchase_calls = [
+                call for call in mock_send_capi.await_args_list
+                if call.kwargs.get("event_name") == "Purchase"
+            ]
+            assert len(purchase_calls) == 1
+            purchase_kwargs = purchase_calls[0].kwargs
+            assert purchase_kwargs["custom_data"]["value"] == 25000.0
+            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
+            assert purchase_kwargs["custom_data"]["payment_type"] == "rent"
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
     
@@ -292,7 +302,7 @@ class TestInputPaymentDate:
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
-            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
             patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
         ):
             mock_session = AsyncMock()
@@ -302,6 +312,16 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
+            assert mock_send_capi.await_count == 2
+            purchase_calls = [
+                call for call in mock_send_capi.await_args_list
+                if call.kwargs.get("event_name") == "Purchase"
+            ]
+            assert len(purchase_calls) == 1
+            purchase_kwargs = purchase_calls[0].kwargs
+            assert purchase_kwargs["custom_data"]["value"] == 20000.0
+            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
+            assert purchase_kwargs["custom_data"]["payment_type"] == "buyout"
             mock_session.execute.assert_called()
             mock_session.commit.assert_called()
             mock_msg.answer.assert_called_once()

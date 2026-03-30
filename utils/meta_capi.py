@@ -71,6 +71,7 @@ async def send_new_user_to_meta_capi(
     lead_id: Optional[int] = None,
     event_time: Any = None,
     event_name: str = "Lead",
+    custom_data: Optional[Mapping[str, Any]] = None,
 ) -> bool:
     if not _enabled():
         return False
@@ -101,16 +102,20 @@ async def send_new_user_to_meta_capi(
         )
         return False
 
+    payload_custom_data: dict[str, Any] = {
+        "event_source": "crm",
+        "lead_event_source": META_CAPI_LEAD_EVENT_SOURCE or "Telegram Bot CRM",
+    }
+    if custom_data:
+        payload_custom_data.update(custom_data)
+
     payload: dict[str, Any] = {
         "data": [
             {
                 "event_name": event_name,
                 "event_time": safe_event_time,
                 "action_source": "system_generated",
-                "custom_data": {
-                    "event_source": "crm",
-                    "lead_event_source": META_CAPI_LEAD_EVENT_SOURCE or "Telegram Bot CRM",
-                },
+                "custom_data": payload_custom_data,
                 "user_data": user_data,
             }
         ]
