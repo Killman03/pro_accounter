@@ -22,6 +22,8 @@ router = Router()
 def _get_payment_event_value(payment_type: str, amount: float) -> float | None:
     if payment_type == "rent":
         return round(amount * 0.5, 2)
+    if payment_type == "deposit":
+        return round(amount, 2)
     if payment_type == "buyout":
         return round(amount * 0.1, 2)
     return None
@@ -169,6 +171,12 @@ async def input_payment_date(msg: Message, state: FSMContext):
         
         # Обновляем статус машины в зависимости от типа платежа
         async with AsyncSessionLocal() as session:
+            if machine.deal_type == "Рассрочка" and len(existing_payments) == 0:
+                await session.execute(
+                    update(CoffeeMachineORM)
+                    .where(CoffeeMachineORM.id == data["machine_id"])
+                    .values(start_date=payment_date)
+                )
             if data["payment_type"] == "buyout":
                 # Выкуп - меняем статус
                 await session.execute(

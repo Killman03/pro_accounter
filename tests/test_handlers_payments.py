@@ -327,3 +327,70 @@ class TestInputPaymentDate:
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_input_payment_date_deposit_sends_purchase(self, mock_coffee_machine):
+        mock_msg = AsyncMock(spec=Message)
+        mock_msg.text = "02-06-2024"
+        mock_msg.answer = AsyncMock()
+        mock_state = AsyncMock(spec=FSMContext)
+        mock_state.get_data = AsyncMock(return_value={
+            "machine_id": 1,
+            "payment_type": "deposit",
+            "amount": 100000.0
+        })
+
+        with (
+            patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.add_payment', new_callable=AsyncMock),
+            patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
+            patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
+        ):
+            mock_session = AsyncMock()
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session.execute = AsyncMock()
+            mock_session.commit = AsyncMock()
+
+            await input_payment_date(mock_msg, mock_state)
+
+            assert mock_send_capi.await_count == 2
+            purchase_calls = [
+                call for call in mock_send_capi.await_args_list
+                if call.kwargs.get("event_name") == "Purchase"
+            ]
+            assert len(purchase_calls) == 1
+            purchase_kwargs = purchase_calls[0].kwargs
+            assert purchase_kwargs["custom_data"]["value"] == 100000.0
+            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
+            assert purchase_kwargs["custom_data"]["payment_type"] == "deposit"
+
+    @pytest.mark.asyncio
+    async def test_input_payment_date_first_installment_updates_start_date(self, mock_coffee_machine):
+        mock_coffee_machine.deal_type = "Рассрочка"
+        mock_msg = AsyncMock(spec=Message)
+        mock_msg.text = "03-06-2024"
+        mock_msg.answer = AsyncMock()
+        mock_state = AsyncMock(spec=FSMContext)
+        mock_state.get_data = AsyncMock(return_value={
+            "machine_id": 1,
+            "payment_type": "rent",
+            "amount": 50000.0
+        })
+
+        with (
+            patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.add_payment', new_callable=AsyncMock),
+            patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
+        ):
+            mock_session = AsyncMock()
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session.execute = AsyncMock()
+            mock_session.commit = AsyncMock()
+
+            await input_payment_date(mock_msg, mock_state)
+
+            mock_session.execute.assert_called()
+            mock_session.commit.assert_called_once()
+
