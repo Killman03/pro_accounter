@@ -7,6 +7,7 @@ from utils.csv_export import generate_profit_share_csv_report
 from datetime import date, timedelta, datetime
 from utils.plots import plot_top_models, plot_starts_per_day, plot_starts_per_week
 from utils.validators import normalize_kg_phone_with_plus
+from utils.meta_value import kgs_to_usd
 import asyncio
 import logging
 
@@ -382,8 +383,8 @@ async def send_profit_share_csv(msg: Message):
                     "event_time": p.payment_date.strftime("%m/%d/%Y"),
                     "phone": normalized_phone,
                     "country": "KG",
-                    "value": f"{event_value:.2f}",
-                    "currency": "KGS",
+                    "value": f"{kgs_to_usd(event_value):.2f}",
+                    "currency": "USD",
                     "event_name": event_name,
                 }
             )

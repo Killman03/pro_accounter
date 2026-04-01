@@ -303,9 +303,9 @@ class TestSendProfitShare:
                         assert rows[0]["event_time"] == "04/01/2026"
                         assert rows[0]["phone"] == "+996555123456"
                         assert rows[0]["country"] == "KG"
-                        assert rows[0]["value"] == "5000.00"
-                        assert rows[0]["currency"] == "KGS"
+                        assert rows[0]["value"] == "56.82"
+                        assert rows[0]["currency"] == "USD"
                         assert rows[0]["event_name"] == "Subscribe"
                         assert rows[1]["event_time"] == "04/10/2026"
-                        assert rows[1]["value"] == "2500.00"
+                        assert rows[1]["value"] == "28.41"
                         mock_msg.answer_document.assert_called_once()

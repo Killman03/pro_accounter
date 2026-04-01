@@ -13,16 +13,10 @@ from db import get_machine_model_by_name
 from db import get_all_machine_models
 from db import get_payments_by_machine
 from utils.meta_capi import send_new_user_to_meta_capi
-from config import META_CAPI_CURRENCY
+from utils.meta_value import kgs_to_usd
 
 
 router = Router()
-
-
-def _get_payment_event_value(payment_type: str, amount: float) -> float | None:
-    if payment_type == "rent":
-        return round(amount * 0.5, 2)
-    return None
 
 
 def _get_machine_full_price(machine, model_full_price: float) -> float:
@@ -238,8 +232,8 @@ async def input_payment_date(msg: Message, state: FSMContext):
                 event_time=payment_date,
                 event_name=event_name,
                 custom_data={
-                    "value": event_value,
-                    "currency": META_CAPI_CURRENCY,
+                    "value": kgs_to_usd(event_value),
+                    "currency": "USD",
                     "payment_type": data["payment_type"],
                 },
             )

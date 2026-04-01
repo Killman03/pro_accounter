@@ -232,7 +232,8 @@ class TestInputPaymentDate:
             assert mock_send_capi.await_count == 1
             kwargs = mock_send_capi.await_args.kwargs
             assert kwargs["event_name"] == "Subscribe"
-            assert kwargs["custom_data"]["value"] == 25000.0
+            assert kwargs["custom_data"]["value"] == 284.09
+            assert kwargs["custom_data"]["currency"] == "USD"
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
     
@@ -267,8 +268,8 @@ class TestInputPaymentDate:
             assert mock_send_capi.await_count == 1
             kwargs = mock_send_capi.await_args.kwargs
             assert kwargs["event_name"] == "Subscribe"
-            assert kwargs["custom_data"]["value"] == 25000.0
-            assert kwargs["custom_data"]["currency"] == "KGS"
+            assert kwargs["custom_data"]["value"] == 284.09
+            assert kwargs["custom_data"]["currency"] == "USD"
             assert kwargs["custom_data"]["payment_type"] == "rent"
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
@@ -318,8 +319,8 @@ class TestInputPaymentDate:
             assert mock_send_capi.await_count == 1
             kwargs = mock_send_capi.await_args.kwargs
             assert kwargs["event_name"] == "Purchase"
-            assert kwargs["custom_data"]["value"] == 30000.0
-            assert kwargs["custom_data"]["currency"] == "KGS"
+            assert kwargs["custom_data"]["value"] == 340.91
+            assert kwargs["custom_data"]["currency"] == "USD"
             assert kwargs["custom_data"]["payment_type"] == "buyout"
             mock_session.execute.assert_called()
             mock_session.commit.assert_called()
@@ -386,7 +387,8 @@ class TestInputPaymentDate:
             assert mock_send_capi.await_count == 1
             kwargs = mock_send_capi.await_args.kwargs
             assert kwargs["event_name"] == "Purchase"
-            assert kwargs["custom_data"]["value"] == 30000.0
+            assert kwargs["custom_data"]["value"] == 340.91
+            assert kwargs["custom_data"]["currency"] == "USD"
             mock_session.execute.assert_called()
             mock_session.commit.assert_called_once()
 

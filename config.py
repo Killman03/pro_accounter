@@ -19,4 +19,3 @@ META_CAPI_API_VERSION = os.getenv('META_CAPI_API_VERSION', 'v25.0').strip() or '
 META_CAPI_LEAD_EVENT_SOURCE = os.getenv('META_CAPI_LEAD_EVENT_SOURCE', 'Telegram Bot CRM').strip()
 META_CAPI_TEST_EVENT_CODE = os.getenv('META_CAPI_TEST_EVENT_CODE', '').strip()
 META_CAPI_PROXY_URL = os.getenv('META_CAPI_PROXY_URL', '').strip()
-META_CAPI_CURRENCY = os.getenv('META_CAPI_CURRENCY', 'KGS').strip() or 'KGS'
