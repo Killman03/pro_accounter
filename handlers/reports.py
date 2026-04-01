@@ -379,7 +379,7 @@ async def send_profit_share_csv(msg: Message):
 
             rows.append(
                 {
-                    "event_time": p.payment_date.isoformat(),
+                    "event_time": p.payment_date.strftime("%m/%d/%Y"),
                     "phone": normalized_phone,
                     "country": "KG",
                     "value": f"{event_value:.2f}",
