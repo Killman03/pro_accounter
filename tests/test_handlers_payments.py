@@ -202,7 +202,7 @@ class TestInputPaymentDate:
     """Тесты для ввода даты платежа"""
     
     @pytest.mark.asyncio
-    async def test_input_payment_date_today(self, mock_coffee_machine):
+    async def test_input_payment_date_today(self, mock_coffee_machine, mock_machine_model):
         """Тест ввода даты платежа - сегодня"""
         mock_msg = AsyncMock(spec=Message)
         mock_msg.text = "."
@@ -216,9 +216,10 @@ class TestInputPaymentDate:
         
         with (
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
-            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
             patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
         ):
             mock_session = AsyncMock()
@@ -228,11 +229,15 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
+            assert mock_send_capi.await_count == 1
+            kwargs = mock_send_capi.await_args.kwargs
+            assert kwargs["event_name"] == "Subscribe"
+            assert kwargs["custom_data"]["value"] == 25000.0
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_input_payment_date_custom(self, mock_coffee_machine):
+    async def test_input_payment_date_custom(self, mock_coffee_machine, mock_machine_model):
         """Тест ввода даты платежа - пользовательская дата"""
         mock_msg = AsyncMock(spec=Message)
         mock_msg.text = "15-01-2024"
@@ -246,6 +251,7 @@ class TestInputPaymentDate:
         
         with (
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
             patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
@@ -258,16 +264,12 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
-            assert mock_send_capi.await_count == 2
-            purchase_calls = [
-                call for call in mock_send_capi.await_args_list
-                if call.kwargs.get("event_name") == "Purchase"
-            ]
-            assert len(purchase_calls) == 1
-            purchase_kwargs = purchase_calls[0].kwargs
-            assert purchase_kwargs["custom_data"]["value"] == 25000.0
-            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
-            assert purchase_kwargs["custom_data"]["payment_type"] == "rent"
+            assert mock_send_capi.await_count == 1
+            kwargs = mock_send_capi.await_args.kwargs
+            assert kwargs["event_name"] == "Subscribe"
+            assert kwargs["custom_data"]["value"] == 25000.0
+            assert kwargs["custom_data"]["currency"] == "KGS"
+            assert kwargs["custom_data"]["payment_type"] == "rent"
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
     
@@ -286,7 +288,7 @@ class TestInputPaymentDate:
         assert "формате" in mock_msg.answer.call_args[0][0].lower() or "дату" in mock_msg.answer.call_args[0][0].lower()
     
     @pytest.mark.asyncio
-    async def test_input_payment_date_buyout_updates_status(self, mock_coffee_machine):
+    async def test_input_payment_date_buyout_updates_status(self, mock_coffee_machine, mock_machine_model):
         """Тест ввода даты платежа - выкуп обновляет статус"""
         mock_msg = AsyncMock(spec=Message)
         mock_msg.text = "01-06-2024"
@@ -300,6 +302,7 @@ class TestInputPaymentDate:
         
         with (
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
             patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
@@ -312,23 +315,19 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
-            assert mock_send_capi.await_count == 2
-            purchase_calls = [
-                call for call in mock_send_capi.await_args_list
-                if call.kwargs.get("event_name") == "Purchase"
-            ]
-            assert len(purchase_calls) == 1
-            purchase_kwargs = purchase_calls[0].kwargs
-            assert purchase_kwargs["custom_data"]["value"] == 20000.0
-            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
-            assert purchase_kwargs["custom_data"]["payment_type"] == "buyout"
+            assert mock_send_capi.await_count == 1
+            kwargs = mock_send_capi.await_args.kwargs
+            assert kwargs["event_name"] == "Purchase"
+            assert kwargs["custom_data"]["value"] == 30000.0
+            assert kwargs["custom_data"]["currency"] == "KGS"
+            assert kwargs["custom_data"]["payment_type"] == "buyout"
             mock_session.execute.assert_called()
             mock_session.commit.assert_called()
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_input_payment_date_deposit_sends_purchase(self, mock_coffee_machine):
+    async def test_input_payment_date_deposit_sends_purchase(self, mock_coffee_machine, mock_machine_model):
         mock_msg = AsyncMock(spec=Message)
         mock_msg.text = "02-06-2024"
         mock_msg.answer = AsyncMock()
@@ -341,6 +340,7 @@ class TestInputPaymentDate:
 
         with (
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
             patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
@@ -353,19 +353,10 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
-            assert mock_send_capi.await_count == 2
-            purchase_calls = [
-                call for call in mock_send_capi.await_args_list
-                if call.kwargs.get("event_name") == "Purchase"
-            ]
-            assert len(purchase_calls) == 1
-            purchase_kwargs = purchase_calls[0].kwargs
-            assert purchase_kwargs["custom_data"]["value"] == 100000.0
-            assert purchase_kwargs["custom_data"]["currency"] == "KGS"
-            assert purchase_kwargs["custom_data"]["payment_type"] == "deposit"
+            assert mock_send_capi.await_count == 0
 
     @pytest.mark.asyncio
-    async def test_input_payment_date_first_installment_updates_start_date(self, mock_coffee_machine):
+    async def test_input_payment_date_first_installment_updates_start_date(self, mock_coffee_machine, mock_machine_model):
         mock_coffee_machine.deal_type = "Рассрочка"
         mock_msg = AsyncMock(spec=Message)
         mock_msg.text = "03-06-2024"
@@ -379,9 +370,10 @@ class TestInputPaymentDate:
 
         with (
             patch('handlers.payments.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]),
+            patch('handlers.payments.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]),
             patch('handlers.payments.add_payment', new_callable=AsyncMock),
             patch('handlers.payments.get_payments_by_machine', new_callable=AsyncMock, return_value=[]),
-            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock),
+            patch('handlers.payments.send_new_user_to_meta_capi', new_callable=AsyncMock) as mock_send_capi,
             patch('handlers.payments.AsyncSessionLocal') as mock_session_local,
         ):
             mock_session = AsyncMock()
@@ -391,6 +383,10 @@ class TestInputPaymentDate:
 
             await input_payment_date(mock_msg, mock_state)
 
+            assert mock_send_capi.await_count == 1
+            kwargs = mock_send_capi.await_args.kwargs
+            assert kwargs["event_name"] == "Purchase"
+            assert kwargs["custom_data"]["value"] == 30000.0
             mock_session.execute.assert_called()
             mock_session.commit.assert_called_once()
 

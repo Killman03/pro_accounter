@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import date, timedelta
 from aiogram.types import Message
-from handlers.reports import send_excel_report, choose_plot, send_summary, send_profit_share
+from handlers.reports import send_excel_report, choose_plot, send_summary, send_profit_share, send_profit_share_csv
 
 
 class TestSendExcelReport:
@@ -246,6 +246,7 @@ class TestSendProfitShare:
         mock_msg = AsyncMock(spec=Message)
         mock_msg.answer_document = AsyncMock()
         mock_coffee_machine.tenant = "Иван Иванов"
+        mock_coffee_machine.phone = "996555111222"
         mock_coffee_machine.deal_type = "Рассрочка"
 
         payment = MagicMock()
@@ -265,4 +266,46 @@ class TestSendProfitShare:
 
                     rows = mock_generate.call_args[0][0]
                     assert rows[0]["Арендатор"] == "Иван Иванов"
+                    assert rows[0]["Телефон"] == "996555111222"
                     assert rows[0]["Тип сделки"] == "Рассрочка"
+
+    @pytest.mark.asyncio
+    async def test_profit_csv_builds_event_per_payment_for_rent(self, mock_coffee_machine, mock_machine_model):
+        mock_msg = AsyncMock(spec=Message)
+        mock_msg.answer_document = AsyncMock()
+        mock_coffee_machine.phone = "+996 555 123 456"
+        mock_coffee_machine.deal_type = "Аренда"
+
+        p1 = MagicMock()
+        p1.payment_date = date(2026, 4, 1)
+        p1.amount = 10000.0
+        p1.is_deposit = False
+        p1.is_buyout = False
+
+        p2 = MagicMock()
+        p2.payment_date = date(2026, 4, 10)
+        p2.amount = 5000.0
+        p2.is_deposit = False
+        p2.is_buyout = False
+
+        with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
+            with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
+                with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, return_value=[p1, p2]):
+                    with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
+                        mock_file = MagicMock()
+                        mock_file.read.return_value = b"csv"
+                        mock_generate.return_value = mock_file
+
+                        await send_profit_share_csv(mock_msg)
+
+                        rows = mock_generate.call_args[0][0]
+                        assert len(rows) == 2
+                        assert rows[0]["event_time"] == "2026-04-01"
+                        assert rows[0]["phone"] == "+996555123456"
+                        assert rows[0]["country"] == "KG"
+                        assert rows[0]["value"] == "5000.00"
+                        assert rows[0]["currency"] == "KGS"
+                        assert rows[0]["event_name"] == "Subscribe"
+                        assert rows[1]["event_time"] == "2026-04-10"
+                        assert rows[1]["value"] == "2500.00"
+                        mock_msg.answer_document.assert_called_once()

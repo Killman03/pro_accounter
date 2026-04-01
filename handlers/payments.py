@@ -22,10 +22,36 @@ router = Router()
 def _get_payment_event_value(payment_type: str, amount: float) -> float | None:
     if payment_type == "rent":
         return round(amount * 0.5, 2)
-    if payment_type == "deposit":
-        return round(amount, 2)
-    if payment_type == "buyout":
-        return round(amount * 0.1, 2)
+    return None
+
+
+def _get_machine_full_price(machine, model_full_price: float) -> float:
+    return float(machine.full_price) if machine.full_price else float(model_full_price)
+
+
+def _build_meta_payment_event(
+    machine,
+    payment_type: str,
+    payment_amount: float,
+    existing_payments_count: int,
+    full_price: float,
+):
+    # Событие только в момент оплаты, не при создании сделки.
+    if machine.deal_type == "Аренда":
+        if payment_type == "rent":
+            value = round(payment_amount * 0.5, 2)
+            return "Subscribe", value
+        if payment_type == "buyout":
+            value = round(full_price * 0.1, 2)
+            return "Purchase", value
+        return None
+
+    if machine.deal_type == "Рассрочка":
+        if existing_payments_count == 0:
+            value = round(full_price * 0.1, 2)
+            return "Purchase", value
+        return None
+
     return None
 
 
@@ -193,20 +219,24 @@ async def input_payment_date(msg: Message, state: FSMContext):
             await session.commit()
     
     await add_payment(payment_data)
-    if machine and len(existing_payments) == 0:
-        await send_new_user_to_meta_capi(
-            {"tenant": machine.tenant, "phone": machine.phone},
-            lead_id=machine.id,
-            event_time=payment_date,
-        )
     if machine:
-        event_value = _get_payment_event_value(data["payment_type"], float(data["amount"]))
-        if event_value is not None:
+        models = {m.name: m for m in await get_all_machine_models()}
+        model_full_price = models[machine.model].full_price if machine.model in models else 0
+        full_price = _get_machine_full_price(machine, model_full_price)
+        event_payload = _build_meta_payment_event(
+            machine=machine,
+            payment_type=data["payment_type"],
+            payment_amount=float(data["amount"]),
+            existing_payments_count=len(existing_payments),
+            full_price=full_price,
+        )
+        if event_payload is not None:
+            event_name, event_value = event_payload
             await send_new_user_to_meta_capi(
                 {"tenant": machine.tenant, "phone": machine.phone},
                 lead_id=machine.id,
                 event_time=payment_date,
-                event_name="Purchase",
+                event_name=event_name,
                 custom_data={
                     "value": event_value,
                     "currency": META_CAPI_CURRENCY,

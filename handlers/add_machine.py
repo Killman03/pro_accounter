@@ -140,6 +140,5 @@ async def input_comment(msg: Message, state: FSMContext):
         "deal_type": data["deal_type"],
         "comment": data["comment"]
     })
-    await send_new_user_to_meta_capi(data, lead_id=getattr(machine, "id", None))
     await msg.answer("Кофемашина успешно добавлена!")
     await state.clear() 

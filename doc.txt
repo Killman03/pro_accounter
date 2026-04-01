@@ -90,5 +90,87 @@ ID набора данных: 949153127659848
 События обычно появляются в Events Manager для вашего пикселя менее чем через час, если интеграция работает.
 После того как ваша интеграция заработает, Meta проверит данные. Ошибки будут показаны в разделе "Диагностика".
 
+Параметры
+Здесь перечислены все обязательные параметры данных для событий, а также дополнительные параметры, которые Conversions API должен использовать для атрибуции рекламы или оптимизации показов.
 
-https://graph.facebook.com/v25.0/949153127659848/events?access_token=EAAUMwCPpdSEBRGBfAP4XkheFA2eazMBPiWeHm98TRK6tnwSa2XcUClDZC2ZAVBa4kNZBmEMTjTUpBJZBV2Q6RSzZC1kDx8khZCq3Py1UH9yY7KQZBIi723ZAdemdXrOxlTnOgjL49VVZBGpqFKVKExNBVHuT2mjOZCVZCZB5lyS3ToWdFn14qJbJ0LVek37rxFWUpVNbDwZDZD
+Теперь Conversions API поддерживает события на сайте, в приложении и события переписки с компанией.
+
+Для событий с сайта, отправленных через Conversions API, требуются параметры client_user_agent, action_source и event_source_url, а для других — толькоaction_source. Эти параметры способствуют повышению качества событий, используемых для показа рекламы, и могут улучшить результаты кампании.
+
+Используя Conversions API, вы соглашаетесь, что параметр action_source является максимально точным, насколько вам это известно.
+
+Основные параметры тела
+data
+test_event_code
+Параметры информации о клиентах
+em: электронный адрес — требуется хэширование
+ph: номер телефона — требуется хэширование
+fn: имя — требуется хэширование
+ln: фамилия — требуется хэширование
+ge: пол — требуется хэширование
+db: дата рождения — требуется хэширование
+ct: город — требуется хэширование
+st: штат, провинция или область — требуется хэширование
+zp: индекс — требуется хэширование
+country: страна — требуется хэширование
+external_id: внешний ID — рекомендуется хэширование
+client_ip_address: IP-адрес клиента — не хэшируйте
+client_user_agent: пользовательский агент клиента — не хэшируйте
+fbc: ID клика — не хэшируйте
+fbp: ID браузера — не хэшируйте
+subscription_id: ID подписки — не хэшируйте
+fb_login_id: ID входа через Facebook — не хэшируйте
+lead_id: ID лида — не хэшируйте
+anon_id: ID установки — не хэшируйте (Примечание. Этот параметр относится только к событиям в приложении)
+madid: ID рекламодателя на мобильном устройстве — не хэшируйте (Примечание. Этот параметр относится только к событиям в приложении.)
+page_id: ID страницы — не хэшируйте
+page_scoped_user_id: ID пользователя в пределах страницы — не хэшируйте
+ctwa_clid: ID клика с переходом в WhatsApp — не хэшируйте
+ig_account_id: ID аккаунта Instagram — не хэшируйте
+ig_sid: ID клика с переходом в Instagram — не хэшируйте
+Параметры серверных событий
+event_name
+event_time
+user_data
+custom_data
+event_source_url
+opt_out
+event_id
+action_source
+data_processing_options
+data_processing_options_country
+data_processing_options_state
+referrer_url
+customer_segmentation
+Параметры данных приложения
+advertiser_tracking_enabled
+application_tracking_enabled
+extinfo
+campaign_ids
+install_referrer
+installer_package
+url_schemes
+windows_attribution_id
+anon_id
+madid
+vendor_id
+Примечание. Руководство по интеграции событий в приложении см. в документации по Conversions API для событий в приложении.
+
+Стандартные параметры
+Ознакомьтесь со списком всех стандартных параметров, которые пользователи могут отправлять в Meta.
+
+Исходные параметры данных событий
+event_name
+event_time
+order_id
+event_id
+
+Conversions API для оптимизации лидов
+Если вы интегрируете CRM-систему с Conversions API для событий лида, ознакомьтесь с руководством по интеграции CRM для необходимых полей.
+
+Дополнительная информация
+Обзор: параметры fbp и fbc
+Дополнительная информация
+Conversions API: документация
+Использование Conversions API
+Руководство по вопросам конфиденциальности и использования данных Meta

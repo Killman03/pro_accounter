@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import re
 from datetime import date, datetime, timezone
 from time import time
 from typing import Any, Mapping, Optional
@@ -12,9 +11,11 @@ from config import (
     META_CAPI_API_VERSION,
     META_CAPI_DATASET_ID,
     META_CAPI_LEAD_EVENT_SOURCE,
+    META_CAPI_PROXY_URL,
     META_CAPI_TEST_EVENT_CODE,
 )
 from utils.telegram_dev_logger import send_dev_log
+from utils.validators import normalize_kg_phone_with_plus
 
 logger = logging.getLogger(__name__)
 MAX_EVENT_AGE_SECONDS = 7 * 24 * 60 * 60
@@ -25,7 +26,7 @@ def _sha256_normalized(value: str) -> str:
 
 
 def _normalize_phone(phone: str) -> str:
-    return re.sub(r"\D+", "", phone or "")
+    return normalize_kg_phone_with_plus(phone) or ""
 
 
 def _split_name(full_name: str) -> tuple[str, str]:
@@ -126,10 +127,11 @@ async def send_new_user_to_meta_capi(
     url = f"https://graph.facebook.com/{META_CAPI_API_VERSION}/{META_CAPI_DATASET_ID}/events"
     params = {"access_token": META_CAPI_ACCESS_TOKEN}
     timeout = aiohttp.ClientTimeout(total=10)
+    proxy = META_CAPI_PROXY_URL or None
 
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, params=params, json=payload) as resp:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.post(url, params=params, json=payload, proxy=proxy) as resp:
                 if resp.status >= 400:
                     body = await resp.text()
                     logger.warning("Meta CAPI failed: status=%s body=%s", resp.status, body)

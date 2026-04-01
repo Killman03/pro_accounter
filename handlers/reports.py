@@ -3,8 +3,10 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from aiogram.filters import Command
 from db import get_all_machines, get_payments_by_machine, get_all_machine_models, get_last_payment_date
 from utils.excel import generate_excel_report, generate_profit_share_report
+from utils.csv_export import generate_profit_share_csv_report
 from datetime import date, timedelta, datetime
 from utils.plots import plot_top_models, plot_starts_per_day, plot_starts_per_week
+from utils.validators import normalize_kg_phone_with_plus
 import asyncio
 import logging
 
@@ -310,6 +312,7 @@ async def send_profit_share(msg: Message):
             "Дата первого платежа": first_payment_dt,
             "Дата оформления": m.start_date,
             "Арендатор": m.tenant,
+            "Телефон": m.phone,
             "Тип сделки": m.deal_type,
             "Модель": m.model,
             "Аренда": m.rent_price,
@@ -327,3 +330,69 @@ async def send_profit_share(msg: Message):
     except Exception:
         logger.exception("Failed to generate/send profit report")
         await msg.answer("Не удалось сформировать Excel-отчет по выплатам. Попробуйте позже.")
+
+
+@router.message(Command("profit_csv"))
+async def send_profit_share_csv(msg: Message):
+    """
+    Формирует CSV для загрузки событий:
+    event_time, phone, country, value, currency, event_name.
+    """
+    machines = await get_all_machines()
+    models = {m.name: m for m in await get_all_machine_models()}
+    rows = []
+
+    for m in machines:
+        payments = sorted(await _get_machine_payments(m), key=lambda p: p.payment_date)
+        if not payments:
+            continue
+
+        normalized_phone = normalize_kg_phone_with_plus(str(getattr(m, "phone", "") or ""))
+        if not normalized_phone:
+            continue
+
+        model_full_price = models[m.model].full_price if m.model in models else 0
+        full_price = float(m.full_price) if m.full_price else float(model_full_price)
+
+        for idx, p in enumerate(payments):
+            amount = float(p.amount or 0)
+            if amount <= 0:
+                continue
+
+            event_name = None
+            event_value = None
+
+            if m.deal_type == "Аренда":
+                if p.is_buyout:
+                    event_name = "Purchase"
+                    event_value = round(full_price * 0.1, 2)
+                elif not p.is_deposit:
+                    event_name = "Subscribe"
+                    event_value = round(amount * 0.5, 2)
+            elif m.deal_type == "Рассрочка":
+                if idx == 0:
+                    event_name = "Purchase"
+                    event_value = round(full_price * 0.1, 2)
+
+            if not event_name or event_value is None or event_value <= 0:
+                continue
+
+            rows.append(
+                {
+                    "event_time": p.payment_date.isoformat(),
+                    "phone": normalized_phone,
+                    "country": "KG",
+                    "value": f"{event_value:.2f}",
+                    "currency": "KGS",
+                    "event_name": event_name,
+                }
+            )
+
+    try:
+        csv_file = generate_profit_share_csv_report(rows)
+        payload = csv_file.read()
+        logger.info("Profit CSV report generated: bytes=%s", len(payload))
+        await msg.answer_document(BufferedInputFile(payload, filename="profit_share.csv"))
+    except Exception:
+        logger.exception("Failed to generate/send profit CSV report")
+        await msg.answer("Не удалось сформировать CSV-отчет по выплатам. Попробуйте позже.")

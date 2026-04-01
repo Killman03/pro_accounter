@@ -4,6 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from db import get_all_machine_models, add_machine_model, delete_machine_model
+import inspect
 
 router = Router()
 
@@ -68,4 +69,6 @@ async def del_model(callback: CallbackQuery, state: FSMContext):
     await delete_machine_model(model_id)
     await callback.message.answer("Модель удалена!")
     await show_models(callback.message, state)
-    await callback.answer() 
+    answer_result = callback.answer()
+    if inspect.isawaitable(answer_result):
+        await answer_result
