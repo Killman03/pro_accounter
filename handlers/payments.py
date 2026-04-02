@@ -14,6 +14,7 @@ from db import get_all_machine_models
 from db import get_payments_by_machine
 from utils.meta_capi import send_new_user_to_meta_capi
 from utils.meta_value import kgs_to_usd
+from utils.meta_time import build_unique_meta_event_time
 
 
 router = Router()
@@ -226,10 +227,11 @@ async def input_payment_date(msg: Message, state: FSMContext):
         )
         if event_payload is not None:
             event_name, event_value = event_payload
+            meta_event_time = build_unique_meta_event_time(payment_date)
             await send_new_user_to_meta_capi(
                 {"tenant": machine.tenant, "phone": machine.phone},
                 lead_id=machine.id,
-                event_time=payment_date,
+                event_time=meta_event_time,
                 event_name=event_name,
                 custom_data={
                     "value": kgs_to_usd(event_value),

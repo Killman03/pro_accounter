@@ -234,6 +234,7 @@ class TestInputPaymentDate:
             assert kwargs["event_name"] == "Subscribe"
             assert kwargs["custom_data"]["value"] == 284.09
             assert kwargs["custom_data"]["currency"] == "USD"
+            assert kwargs["event_time"].isoformat().endswith("+06:00")
             mock_msg.answer.assert_called_once()
             mock_state.clear.assert_called_once()
     

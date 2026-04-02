@@ -342,6 +342,7 @@ async def send_profit_share_csv(msg: Message):
     machines = await get_all_machines()
     models = {m.name: m for m in await get_all_machine_models()}
     rows = []
+    min_event_date = date.today() - timedelta(days=7)
 
     for m in machines:
         payments = sorted(await _get_machine_payments(m), key=lambda p: p.payment_date)
@@ -356,6 +357,8 @@ async def send_profit_share_csv(msg: Message):
         full_price = float(m.full_price) if m.full_price else float(model_full_price)
 
         for idx, p in enumerate(payments):
+            if p.payment_date < min_event_date:
+                continue
             amount = float(p.amount or 0)
             if amount <= 0:
                 continue

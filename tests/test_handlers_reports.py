@@ -357,3 +357,38 @@ class TestSendProfitShare:
                         rows = mock_generate.call_args[0][0]
                         assert rows[0]["event_time"] == "04/01/2026"
                         assert rows[1]["event_time"] == "05/10/2026"
+
+    @pytest.mark.asyncio
+    async def test_profit_csv_includes_only_events_within_last_7_days(self, mock_coffee_machine, mock_machine_model):
+        mock_msg = AsyncMock(spec=Message)
+        mock_msg.answer_document = AsyncMock()
+        mock_coffee_machine.phone = "+996 555 123 456"
+        mock_coffee_machine.deal_type = "Аренда"
+
+        recent_payment = MagicMock()
+        recent_payment.payment_date = date(2026, 4, 2)
+        recent_payment.amount = 8800.0
+        recent_payment.is_deposit = False
+        recent_payment.is_buyout = False
+
+        old_payment = MagicMock()
+        old_payment.payment_date = date(2026, 3, 20)
+        old_payment.amount = 8800.0
+        old_payment.is_deposit = False
+        old_payment.is_buyout = False
+
+        with patch('handlers.reports.date') as mock_date:
+            mock_date.today.return_value = date(2026, 4, 2)
+            with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
+                with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
+                    with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, return_value=[old_payment, recent_payment]):
+                        with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
+                            mock_file = MagicMock()
+                            mock_file.read.return_value = b"csv"
+                            mock_generate.return_value = mock_file
+
+                            await send_profit_share_csv(mock_msg)
+
+                            rows = mock_generate.call_args[0][0]
+                            assert len(rows) == 1
+                            assert rows[0]["event_time"] == "04/02/2026"
