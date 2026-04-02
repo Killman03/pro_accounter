@@ -300,13 +300,15 @@ class TestSendProfitShare:
 
                         rows = mock_generate.call_args[0][0]
                         assert len(rows) == 2
-                        assert rows[0]["event_time"] == "04/01/2026"
+                        assert rows[0]["event_time"].startswith("2026-04-01T")
+                        assert rows[0]["event_time"].endswith("+06:00")
                         assert rows[0]["phone"] == "+996555123456"
                         assert rows[0]["country"] == "KG"
                         assert rows[0]["value"] == "56.82"
                         assert rows[0]["currency"] == "USD"
                         assert rows[0]["event_name"] == "Subscribe"
-                        assert rows[1]["event_time"] == "04/10/2026"
+                        assert rows[1]["event_time"].startswith("2026-04-10T")
+                        assert rows[1]["event_time"].endswith("+06:00")
                         assert rows[1]["value"] == "28.41"
                         mock_msg.answer_document.assert_called_once()
 
@@ -355,8 +357,8 @@ class TestSendProfitShare:
                         await send_profit_share_csv(mock_msg)
 
                         rows = mock_generate.call_args[0][0]
-                        assert rows[0]["event_time"] == "04/01/2026"
-                        assert rows[1]["event_time"] == "05/10/2026"
+                        assert rows[0]["event_time"].startswith("2026-04-01T")
+                        assert rows[1]["event_time"].startswith("2026-05-10T")
 
     @pytest.mark.asyncio
     async def test_profit_csv_includes_only_events_within_last_7_days(self, mock_coffee_machine, mock_machine_model):
@@ -391,4 +393,5 @@ class TestSendProfitShare:
 
                             rows = mock_generate.call_args[0][0]
                             assert len(rows) == 1
-                            assert rows[0]["event_time"] == "04/02/2026"
+                            assert rows[0]["event_time"].startswith("2026-04-02T")
+                            assert rows[0]["event_time"].endswith("+06:00")

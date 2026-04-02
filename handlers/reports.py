@@ -8,6 +8,7 @@ from datetime import date, timedelta, datetime
 from utils.plots import plot_top_models, plot_starts_per_day, plot_starts_per_week
 from utils.validators import normalize_kg_phone_with_plus
 from utils.meta_value import kgs_to_usd
+from utils.meta_time import build_unique_meta_event_time
 import asyncio
 import logging
 
@@ -383,7 +384,7 @@ async def send_profit_share_csv(msg: Message):
 
             rows.append(
                 {
-                    "event_time": p.payment_date.strftime("%m/%d/%Y"),
+                    "event_time": build_unique_meta_event_time(p.payment_date).isoformat(),
                     "phone": normalized_phone,
                     "country": "KG",
                     "value": f"{kgs_to_usd(event_value):.2f}",
@@ -393,7 +394,7 @@ async def send_profit_share_csv(msg: Message):
             )
 
     try:
-        rows.sort(key=lambda r: datetime.strptime(r["event_time"], "%m/%d/%Y"))
+        rows.sort(key=lambda r: datetime.fromisoformat(r["event_time"]))
         csv_file = generate_profit_share_csv_report(rows)
         payload = csv_file.read()
         logger.info("Profit CSV report generated: bytes=%s", len(payload))
