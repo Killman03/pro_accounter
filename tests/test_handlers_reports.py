@@ -309,3 +309,51 @@ class TestSendProfitShare:
                         assert rows[1]["event_time"] == "04/10/2026"
                         assert rows[1]["value"] == "28.41"
                         mock_msg.answer_document.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_profit_csv_sorts_by_event_time_ascending_across_rows(self, mock_machine_model):
+        mock_msg = AsyncMock(spec=Message)
+        mock_msg.answer_document = AsyncMock()
+
+        m1 = MagicMock()
+        m1.id = 1
+        m1.phone = "+996555111111"
+        m1.deal_type = "Аренда"
+        m1.model = "Saeco Lirika"
+        m1.full_price = 300000.0
+
+        m2 = MagicMock()
+        m2.id = 2
+        m2.phone = "+996555222222"
+        m2.deal_type = "Аренда"
+        m2.model = "Saeco Lirika"
+        m2.full_price = 300000.0
+
+        p_new = MagicMock()
+        p_new.payment_date = date(2026, 5, 10)
+        p_new.amount = 10000.0
+        p_new.is_deposit = False
+        p_new.is_buyout = False
+
+        p_old = MagicMock()
+        p_old.payment_date = date(2026, 4, 1)
+        p_old.amount = 10000.0
+        p_old.is_deposit = False
+        p_old.is_buyout = False
+
+        async def payments_side_effect(machine_id: int):
+            return [p_new] if machine_id == 1 else [p_old]
+
+        with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[m1, m2]):
+            with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
+                with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, side_effect=payments_side_effect):
+                    with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
+                        mock_file = MagicMock()
+                        mock_file.read.return_value = b"csv"
+                        mock_generate.return_value = mock_file
+
+                        await send_profit_share_csv(mock_msg)
+
+                        rows = mock_generate.call_args[0][0]
+                        assert rows[0]["event_time"] == "04/01/2026"
+                        assert rows[1]["event_time"] == "05/10/2026"

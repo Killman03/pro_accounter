@@ -390,6 +390,7 @@ async def send_profit_share_csv(msg: Message):
             )
 
     try:
+        rows.sort(key=lambda r: datetime.strptime(r["event_time"], "%m/%d/%Y"))
         csv_file = generate_profit_share_csv_report(rows)
         payload = csv_file.read()
         logger.info("Profit CSV report generated: bytes=%s", len(payload))
