@@ -3,6 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 main_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="/start")],
+        [KeyboardButton(text="/checklist")],
         [KeyboardButton(text="/profit"), KeyboardButton(text="/profit_csv")],
         [KeyboardButton(text="/delete_machine"), KeyboardButton(text="/delete_payment")],
     ],

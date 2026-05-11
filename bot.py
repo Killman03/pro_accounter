@@ -11,6 +11,7 @@ from handlers.reminders import router as reminders_router, reminders_task
 from handlers.payments import router as payments_router, start_payments
 from handlers.models import router as models_router, show_models
 from handlers.clients import router as clients_router, show_clients
+from handlers.checklists import ChecklistFSM, router as checklists_router
 from db import delete_coffee_machine, delete_payment, delete_coffee_machine_by_tenant, delete_payment_by_tenant
 
 from aiogram.filters import Command
@@ -29,6 +30,7 @@ def setup_routers(dp: Dispatcher):
     dp.include_router(payments_router)
     dp.include_router(models_router)
     dp.include_router(clients_router)
+    dp.include_router(checklists_router)
 
 
 class DeleteMachineFSM(StatesGroup):
@@ -105,6 +107,12 @@ async def main():
     @dp.callback_query(F.data == "/models")
     async def cb_models(callback: CallbackQuery, state: FSMContext):
         await show_models(callback.message, state)
+        await callback.answer()
+
+    @dp.callback_query(F.data == "/checklist")
+    async def cb_checklist(callback: CallbackQuery, state: FSMContext):
+        await callback.message.answer("Вставьте чеклист одним сообщением.", reply_markup=main_menu_kb)
+        await state.set_state(ChecklistFSM.waiting_text)
         await callback.answer()
 
     @dp.callback_query(F.data == "/report")
