@@ -288,29 +288,31 @@ class TestSendProfitShare:
         p2.is_deposit = False
         p2.is_buyout = False
 
-        with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
-            with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
-                with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, return_value=[p1, p2]):
-                    with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
-                        mock_file = MagicMock()
-                        mock_file.read.return_value = b"csv"
-                        mock_generate.return_value = mock_file
+        with patch('handlers.reports.date') as mock_date:
+            mock_date.today.return_value = date(2026, 4, 8)
+            with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[mock_coffee_machine]):
+                with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
+                    with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, return_value=[p1, p2]):
+                        with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
+                            mock_file = MagicMock()
+                            mock_file.read.return_value = b"csv"
+                            mock_generate.return_value = mock_file
 
-                        await send_profit_share_csv(mock_msg)
+                            await send_profit_share_csv(mock_msg)
 
-                        rows = mock_generate.call_args[0][0]
-                        assert len(rows) == 2
-                        assert rows[0]["event_time"].startswith("2026-04-01T")
-                        assert rows[0]["event_time"].endswith("+06:00")
-                        assert rows[0]["phone"] == "+996555123456"
-                        assert rows[0]["country"] == "KG"
-                        assert rows[0]["value"] == "56.82"
-                        assert rows[0]["currency"] == "USD"
-                        assert rows[0]["event_name"] == "Subscribe"
-                        assert rows[1]["event_time"].startswith("2026-04-10T")
-                        assert rows[1]["event_time"].endswith("+06:00")
-                        assert rows[1]["value"] == "28.41"
-                        mock_msg.answer_document.assert_called_once()
+                            rows = mock_generate.call_args[0][0]
+                            assert len(rows) == 2
+                            assert rows[0]["event_time"].startswith("2026-04-01T")
+                            assert rows[0]["event_time"].endswith("+06:00")
+                            assert rows[0]["phone"] == "+996555123456"
+                            assert rows[0]["country"] == "KG"
+                            assert rows[0]["value"] == "56.82"
+                            assert rows[0]["currency"] == "USD"
+                            assert rows[0]["event_name"] == "Subscribe"
+                            assert rows[1]["event_time"].startswith("2026-04-10T")
+                            assert rows[1]["event_time"].endswith("+06:00")
+                            assert rows[1]["value"] == "28.41"
+                            mock_msg.answer_document.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_profit_csv_sorts_by_event_time_ascending_across_rows(self, mock_machine_model):
@@ -338,7 +340,7 @@ class TestSendProfitShare:
         p_new.is_buyout = False
 
         p_old = MagicMock()
-        p_old.payment_date = date(2026, 4, 1)
+        p_old.payment_date = date(2026, 5, 5)
         p_old.amount = 10000.0
         p_old.is_deposit = False
         p_old.is_buyout = False
@@ -346,19 +348,21 @@ class TestSendProfitShare:
         async def payments_side_effect(machine_id: int):
             return [p_new] if machine_id == 1 else [p_old]
 
-        with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[m1, m2]):
-            with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
-                with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, side_effect=payments_side_effect):
-                    with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
-                        mock_file = MagicMock()
-                        mock_file.read.return_value = b"csv"
-                        mock_generate.return_value = mock_file
+        with patch('handlers.reports.date') as mock_date:
+            mock_date.today.return_value = date(2026, 5, 12)
+            with patch('handlers.reports.get_all_machines', new_callable=AsyncMock, return_value=[m1, m2]):
+                with patch('handlers.reports.get_all_machine_models', new_callable=AsyncMock, return_value=[mock_machine_model]):
+                    with patch('handlers.reports.get_payments_by_machine', new_callable=AsyncMock, side_effect=payments_side_effect):
+                        with patch('handlers.reports.generate_profit_share_csv_report') as mock_generate:
+                            mock_file = MagicMock()
+                            mock_file.read.return_value = b"csv"
+                            mock_generate.return_value = mock_file
 
-                        await send_profit_share_csv(mock_msg)
+                            await send_profit_share_csv(mock_msg)
 
-                        rows = mock_generate.call_args[0][0]
-                        assert rows[0]["event_time"].startswith("2026-04-01T")
-                        assert rows[1]["event_time"].startswith("2026-05-10T")
+                            rows = mock_generate.call_args[0][0]
+                            assert rows[0]["event_time"].startswith("2026-05-05T")
+                            assert rows[1]["event_time"].startswith("2026-05-10T")
 
     @pytest.mark.asyncio
     async def test_profit_csv_includes_only_events_within_last_7_days(self, mock_coffee_machine, mock_machine_model):
